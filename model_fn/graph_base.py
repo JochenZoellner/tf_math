@@ -1,11 +1,10 @@
 import tensorflow as tf
 
 
-class GraphBase(tf.keras.models.Model):
+class GraphBase(tf.keras.Model):
     def __init__(self, params):
         super(GraphBase, self).__init__()
         self.graph_params = dict()
-
         self._flags = params['flags']
         self.global_step = tf.Variable(0, trainable=False, dtype=tf.int64, name="global_step")
         self.global_epoch = tf.Variable(0, trainable=False, dtype=tf.int64, name="global_epoch")
