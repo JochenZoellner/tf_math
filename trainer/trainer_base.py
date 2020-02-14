@@ -20,6 +20,8 @@ flags.define_integer('samples_per_epoch', 100000, 'Samples shown to the net per 
 #                                      ' for negative values LOCAL norm clipping is performed (default: %(default)s)')
 flags.define_string('optimizer', 'FinalDecayOptimizer', 'the optimizer used to compute and apply gradients.')
 flags.define_dict('optimizer_params', {}, "key=value pairs defining the configuration of the optimizer.")
+flags.define_dict('input_fn_params', {}, "key=value pairs defining the configuration of the optimizer.")
+
 flags.define_string('learn_rate_schedule', "decay", 'decay, finaldecay, warmupfinaldecay')
 flags.define_dict("learn_rate_params", {}, "key=value pairs defining the configuration of the learn_rate_schedule.")
 # flags.define_string('train_scopes', '', 'Change only variables in this scope during training')

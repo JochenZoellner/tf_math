@@ -6,6 +6,7 @@ import tensorflow as tf
 
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.polygone_2d_helper as polygon2d
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as t2d
+import model_fn.util_model_fn.custom_layers as c_layers
 
 
 def _int64_feature(value):
@@ -115,9 +116,30 @@ class Triangle2dSaver(object):
 
         for i in range(self.samples_per_file):
             points = t2d.generate_target(x_sorted=self.x_sorted)
+
             fc_arr = t2d.make_scatter_data(points, epsilon=self.epsilon, phi_arr=self.phi_arr, dphi=self.dphi,
                                            complex_phi=self.complex_phi)
             serialized_sample = self.serialize_example_pyfunction(points, fc_arr)
+            # Serialize to string and write on the file
+            writer.write(serialized_sample)
+
+        writer.close()
+        sys.stdout.flush()
+
+    def save_file_tf(self, filename):
+        # open the TFRecords file
+        writer = tf.io.TFRecordWriter(filename)
+
+        D_TYPE = tf.float32
+        phi_tf = tf.expand_dims(tf.constant(self.phi_arr, D_TYPE), axis=0)
+
+        fc_obj = c_layers.ScatterPolygonTF(phi_tf, dtype=D_TYPE, with_batch_dim=False)
+
+        for i in range(self.samples_per_file):
+            points = tf.constant(t2d.generate_target(x_sorted=self.x_sorted), D_TYPE)
+            fc_arr = fc_obj(points)
+            fc_arr = tf.concat((phi_tf, fc_arr), axis=0)
+            serialized_sample = self.serialize_example_pyfunction(points.numpy(), fc_arr.numpy())
             # Serialize to string and write on the file
             writer.write(serialized_sample)
 

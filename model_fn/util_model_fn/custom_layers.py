@@ -88,6 +88,14 @@ class ScatterPolygonTF(tf.keras.layers.Layer):
             res = tf.concat((tf.math.real(sum_res), tf.math.imag(sum_res)), axis=1)
         else:
             res = tf.concat((tf.math.real(sum_res), tf.math.imag(sum_res)), axis=0)
+        # import matplotlib.pyplot as plt
+        # plt.figure()
+        # plt.plot(self.phi_tf, res[0, 0])
+        # plt.plot(self.phi_tf, res[0, 1])
+        # res = tf.where(tf.expand_dims(tf.not_equal(self.phi_tf, tf.constant(0.0, self.mydtype)), axis=0), res, tf.zeros_like(res, self.mydtype))
+        # plt.figure()
+        # plt.plot(self.phi_tf, res[0, 0])
+        # plt.plot(self.phi_tf, res[0, 1])
 
         return res
 

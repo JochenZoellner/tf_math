@@ -15,7 +15,7 @@ from model_fn.model_fn_base import ModelBase
 class ModelTriangle(ModelBase):
     def __init__(self, params):
         super(ModelTriangle, self).__init__(params)
-        self.mydtype = tf.float32
+        self.mydtype = tf.float64
         self._targets = None
         self._point_dist = None
         self._summary_object = {"tgt_points": [], "pre_points": [], "ordered_best": [], "unordered_best": []}
@@ -68,9 +68,9 @@ class ModelTriangle(ModelBase):
         pre_points = tf.cast(tf.reshape(predictions['pre_points'], [-1, 3, 2]), dtype=self.mydtype)
         pre_points = make_positiv_orientation(pre_points, dtype=self.mydtype)
         res_scatter = self.scatter_polygon_tf(points_tf=pre_points)
-        loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_squared_error(res_scatter, fc[:, 1:, :]))
+        loss_input_diff = tf.reduce_mean(tf.math.sqrt(tf.keras.losses.mean_absolute_error(res_scatter, fc[:, 1:, :])))
         targets_oriented = make_positiv_orientation(targets["points"], dtype=self.mydtype)
-        loss_point_diff = tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented))
+        loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)), self.mydtype)
         # tf.print("input_diff-loss", loss_input_diff)
         if self._flags.loss_mode == "input_diff":
             self._loss += loss_input_diff
@@ -81,15 +81,24 @@ class ModelTriangle(ModelBase):
         self.metrics[self._mode]["loss_point_diff"](loss_point_diff)
 
         # plt.figure()
-        # plt.plot(fc[0, 0, :], fc[0, 1, :], label="input_real")
-        # plt.plot(fc[0, 0, :], fc[0, 2, :], label="input_imag")
-        # plt.plot(fc[0, 0, :], res_scatter[0, 0, :], label="pred_rec_real")
-        # plt.plot(fc[0, 0, :], res_scatter[0, 1, :], label="pred_rec_imag")
-        # res_scatter = self.scatter_polygon_tf(points_tf=targets["points"])
-        # plt.plot(fc[0, 0, :], res_scatter[0, 0, :], label="input_rec_real")
-        # plt.plot(fc[0, 0, :], res_scatter[0, 1, :], label="input_rec_imag")
+        # mask_fc = np.ma.masked_where(fc[0, 0, :] == 0.0, fc[0, 0, :])
+        # plt.plot(mask_fc, fc[0, 1, :], "-r", label="input_real")
+        # plt.plot(mask_fc, fc[0, 2, :], "-b", label="input_imag")
+        # import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as t2dh
+        # scatter_ploygon = t2dh.Fcalculator(p1=targets_oriented[0][0], p2=targets_oriented[0][1], p3=targets_oriented[0][2])
+        # res_np = scatter_ploygon.call_on_array(fc[0, 0, :])
+        # mask_res_np = np.ma.masked_where(fc[0, 0, :] == 0.0, res_np)
+        # plt.plot(mask_fc, mask_res_np.real, "+r", label="tgt_np_real")
+        # plt.plot(mask_fc, mask_res_np.imag, "+b", label="tgt_np_imag")
+        #
+        #
+        # plt.plot(mask_fc, res_scatter[0, 0, :], label="pred_rec_real")
+        # plt.plot(mask_fc, res_scatter[0, 1, :], label="pred_rec_imag")
+        # # res_scatter = self.scatter_polygon_tf(points_tf=targets_oriented)
+        # # plt.plot(mask_fc, res_scatter[0, 0, :], label="input_rec_real")
+        # # plt.plot(mask_fc, res_scatter[0, 1, :], label="input_rec_imag")
         # print("phi:", fc[0, 0, :])
-        # print("tgt shape", tf.shape(targets["points"]))
+        # print("tgt shape", tf.shape(targets_oriented))
         # print("scatter res shape", tf.shape(res_scatter))
         # plt.legend()
         # plt.show()
@@ -350,6 +359,7 @@ def get_orientation_batched(batched_point_squence, dtype=tf.float32):
     -find point with max X, (
     :raises ValueError if 3 neighbouring points have the same max x-coordinate"""
     # find max x-coordinate
+    batched_point_squence = tf.cast(batched_point_squence, dtype)
     max_x_arg = tf.argmax(batched_point_squence[:, :, 0], axis=1)
     # construct gather indices for 3 Points with max x-Point centered
     ranged = tf.range(max_x_arg.shape[0], dtype=tf.int64)
@@ -379,10 +389,10 @@ def get_orientation_batched(batched_point_squence, dtype=tf.float32):
 
 
 def make_positiv_orientation(batched_point_squence, dtype=tf.float32):
-    orientation = get_orientation_batched(batched_point_squence)
+    orientation = get_orientation_batched(batched_point_squence, dtype=dtype)
     orientation_bool_vec = orientation > tf.constant([0.0], dtype)
     # print("orientation_bool_vec", orientation_bool_vec)
     orientation_arr = tf.broadcast_to(tf.expand_dims(tf.expand_dims(orientation_bool_vec, axis=-1), axis=-1), batched_point_squence.shape)
     # print("orientation_arr",orientation_arr)
-    batched_point_squence = tf.where(orientation_arr, batched_point_squence, tf.reverse(batched_point_squence, axis=[1]))
+    batched_point_squence = tf.where(orientation_arr, tf.reverse(batched_point_squence, axis=[1]), batched_point_squence)
     return batched_point_squence
