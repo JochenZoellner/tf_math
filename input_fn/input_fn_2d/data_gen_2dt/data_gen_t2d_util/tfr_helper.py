@@ -128,12 +128,10 @@ class Triangle2dSaver(object):
 
     def save_file_tf(self, filename):
         # open the TFRecords file
-        writer = tf.io.TFRecordWriter(filename)
-
         D_TYPE = tf.float32
-        phi_tf = tf.expand_dims(tf.constant(self.phi_arr, D_TYPE), axis=0)
+        phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(self.phi_arr, D_TYPE), axis=0), axis=0)
 
-        fc_obj = c_layers.ScatterPolygonTF(phi_tf, dtype=D_TYPE, with_batch_dim=False)
+        fc_obj = c_layers.ScatterPolygonTF(phi_tf, dtype=D_TYPE, with_batch_dim=True)
         point_list = []
         for i in range(self.samples_per_file):
             points = t2d.generate_target(x_sorted=self.x_sorted)
@@ -142,13 +140,14 @@ class Triangle2dSaver(object):
         batch_points = np.stack(point_list)
         fc_arr = fc_obj.__call__(batch_points)
 
-        for i in range(self.samples_per_file):
-            fc_arr = tf.concat((phi_tf, fc_arr), axis=0)
-            serialized_sample = self.serialize_example_pyfunction(batch_points[i].numpy(), fc_arr=tf.concat((phi_tf, fc_arr[i]), axis=0).numpy())
-            # Serialize to string and write on the file
-            writer.write(serialized_sample)
+        with tf.io.TFRecordWriter(filename) as writer:
+            for i in range(self.samples_per_file):
+                # fc_arr = tf.concat((phi_tf[0], fc_arr[i]), axis=0)
+                serialized_sample = self.serialize_example_pyfunction(batch_points[i], fc_arr=tf.concat((phi_tf[0], fc_arr[i]), axis=0).numpy())
+                # Serialize to string and write on the file
 
-        writer.close()
+                writer.write(serialized_sample)
+
         sys.stdout.flush()
 
 

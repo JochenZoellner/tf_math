@@ -90,15 +90,15 @@ if __name__ == "__main__":
 
     # save_TFR_x = partial(tfr_helper.save_tfr_t2d, samples=flags.FLAGS.samples_per_file)
     # pool = multiprocessing.Pool(8)
-    if flags.FLAGS.jobs <= 0:
-        jobs = os.cpu_count()
-    else:
-        jobs = flags.FLAGS.jobs
-    # pool = multiprocessing.Pool(jobs)
+    # if flags.FLAGS.jobs <= 0:
+    #     jobs = os.cpu_count()
+    # else:
+    #     jobs = flags.FLAGS.jobs
+    # pool = multiprocessing.Pool(1)
     # pool.map(t2d_saver_obj.save_file_tf, filename_list)
     # pool.close()
-
-    t2d_saver_obj.save_file_tf(filename_list[0])
+    for i in filename_list:
+        t2d_saver_obj.save_file_tf(i)
     print("  Time for data generation: {:0.1f}".format(time.time() - timer1))
     print("  Done.")
 
@@ -110,13 +110,14 @@ if __name__ == "__main__":
         parsed_dataset = raw_dataset.map(tfr_helper.parse_t2d)
     else:
         parsed_dataset = raw_dataset.map(tfr_helper.parse_t2d_phi_complex)
-    parsed_dataset_batched = parsed_dataset.batch(10)
+    parsed_dataset_batched = parsed_dataset.batch(1000)
     # parsed_dataset_batched = parsed_dataset_batched.repeat(10)
     print(parsed_dataset)
     counter = 0
     for sample in parsed_dataset_batched:
         # tf.decode_raw(sample["fc"], out_type=tf.float32)
         a = sample[0]["fc"]
+        print(a.shape)
         counter += 1
 
     # print(counter)

@@ -7,7 +7,6 @@ import tensorflow as tf
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tfr_helper as tfr_helper
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
-tf.enable_eager_execution()
 
 if __name__ == "__main__":
     print("run IS2d_triangle")
