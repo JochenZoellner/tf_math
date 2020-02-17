@@ -7,6 +7,7 @@ import uuid
 
 import numpy as np
 
+os.environ["CUDA_VISIBLE_DEVICES"] = ""  # hide all gpu's until needed
 import tensorflow as tf
 
 import util.flags as flags
@@ -15,7 +16,6 @@ import model_fn.util_model_fn.custom_layers as c_layer
 from util.misc import get_commit_id
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or any {'0', '1', '2'} set tensorflow logleve 2=warning
-os.environ["CUDA_VISIBLE_DEVICES"] = ""  # hide all gpu's until needed
 
 
 # ========
@@ -94,9 +94,11 @@ if __name__ == "__main__":
         jobs = os.cpu_count()
     else:
         jobs = flags.FLAGS.jobs
-    pool = multiprocessing.Pool(jobs)
-    pool.map(t2d_saver_obj.save_file_tf, filename_list)
-    pool.close()
+    # pool = multiprocessing.Pool(jobs)
+    # pool.map(t2d_saver_obj.save_file_tf, filename_list)
+    # pool.close()
+
+    t2d_saver_obj.save_file_tf(filename_list[0])
     print("  Time for data generation: {:0.1f}".format(time.time() - timer1))
     print("  Done.")
 

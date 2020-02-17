@@ -134,12 +134,17 @@ class Triangle2dSaver(object):
         phi_tf = tf.expand_dims(tf.constant(self.phi_arr, D_TYPE), axis=0)
 
         fc_obj = c_layers.ScatterPolygonTF(phi_tf, dtype=D_TYPE, with_batch_dim=False)
+        point_list = []
+        for i in range(self.samples_per_file):
+            points = t2d.generate_target(x_sorted=self.x_sorted)
+            point_list.append(points)
+
+        batch_points = np.stack(point_list)
+        fc_arr = fc_obj.__call__(batch_points)
 
         for i in range(self.samples_per_file):
-            points = tf.constant(t2d.generate_target(x_sorted=self.x_sorted), D_TYPE)
-            fc_arr = fc_obj(points)
             fc_arr = tf.concat((phi_tf, fc_arr), axis=0)
-            serialized_sample = self.serialize_example_pyfunction(points.numpy(), fc_arr.numpy())
+            serialized_sample = self.serialize_example_pyfunction(batch_points[i].numpy(), fc_arr=tf.concat((phi_tf, fc_arr[i]), axis=0).numpy())
             # Serialize to string and write on the file
             writer.write(serialized_sample)
 
