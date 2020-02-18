@@ -117,7 +117,8 @@ if __name__ == "__main__":
     for sample in parsed_dataset_batched:
         # tf.decode_raw(sample["fc"], out_type=tf.float32)
         a = sample[0]["fc"]
-        print(a.shape)
+        if counter == 1:
+            print(a.shape)
         counter += 1
 
     # print(counter)
