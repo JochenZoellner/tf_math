@@ -68,13 +68,13 @@ class ModelTriangle(ModelBase):
         pre_points = tf.cast(tf.reshape(predictions['pre_points'], [-1, 3, 2]), dtype=self.mydtype)
         pre_points = make_positiv_orientation(pre_points, dtype=self.mydtype)
         res_scatter = self.scatter_polygon_tf(points_tf=pre_points)
-        loss_input_diff = tf.reduce_mean(tf.math.sqrt(tf.keras.losses.mean_absolute_error(res_scatter, fc[:, 1:, :])))
+        loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(res_scatter, fc[:, 1:, :]))
         targets_oriented = make_positiv_orientation(targets["points"], dtype=self.mydtype)
         loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)), self.mydtype)
         # tf.print("input_diff-loss", loss_input_diff)
-        if self._flags.loss_mode == "input_diff":
+        if "input_diff" in self._flags.loss_mode:
             self._loss += loss_input_diff
-        elif self._flags.loss_mode == "point_diff":
+        if "point_diff" in self._flags.loss_mode:
             self._loss += loss_point_diff
 
         self.metrics[self._mode]["loss_input_diff"](loss_input_diff)

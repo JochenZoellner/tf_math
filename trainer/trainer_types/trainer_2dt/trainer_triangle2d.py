@@ -14,7 +14,7 @@ flags.define_dict('graph_params', {}, "key=value pairs defining the configuratio
                                       "mvn (bool), nhidden_lstm_1 (int), nhidden_lstm_2 (int),"
                                       "nhidden_lstm_3 (int), dropout_lstm_1 (float), dropout_lstm_2 (float), "
                                       "dropout_lstm_3 (float), relu_clip (float)]")
-flags.define_string('loss_mode', 'point_diff', 'switch loss calculation, see model_fn_2dtriangle.py')
+flags.define_list('loss_mode', str, ['point_diff'], 'switch loss calculation, see model_fn_2dtriangle.py')
 flags.define_integer('data_len', 3142, 'F(phi) amount of values saved in one line')
 flags.define_boolean('complex_phi', False, "if set: a=phi.real, b=phi.imag, instead of a=cos(phi) b=sin(phi)-1")
 flags.FLAGS.parse_flags()
