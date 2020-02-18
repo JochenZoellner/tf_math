@@ -7,7 +7,7 @@ import tensorflow as tf
 
 import util.flags as flags
 from util.misc import get_commit_id, Tee
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
+# os.environ["CUDA_VISIBLE_DEVICES"] = ""
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # Training
 # ========
@@ -63,11 +63,40 @@ flags.define_list('gpu_devices', int, 'space seperated list of GPU indices to us
 # flags.define_string('dist_strategy', 'mirror', 'DistributionStrategy in MultiGPU scenario. '
 #                                                'mirror - MirroredStrategy, ps - ParameterServerStrategy')
 # flags.define_boolean('gpu_auto_tune', False, 'GPU auto tune (default: %(default)s)')
-# flags.define_float('gpu_memory', -1, 'set gpu memory in MB allocated on each (allowed) gpu')
+
+flags.define_float('gpu_memory_limit', -1, 'set gpu memory in MB allocated on each (allowed) gpu '
+                                           'KEEP IN MIND: there are around 350 MB overhead per process ')
+flags.define_float('gpu_memory_growth', True, 'allocate only the needed memory within memory-limit')
 flags.define_string('print_to', 'console', 'write prints to "console, "file", "both"')
 flags.define_boolean("tensorboard", True, "if True: write tensorboard logs")
 flags.define_boolean('force_eager', False, 'ignore tf.function decorator, run every thing eagerly for debugging')
 flags.FLAGS.parse_flags()
+
+
+def set_run_config():
+    # hide gpu's befor gpu initializing by using tf functions
+    gpu_list = ','.join(str(x) for x in flags.FLAGS.gpu_devices)
+    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_list
+    print("VISIBLE GPU-DEVICES:", os.environ["CUDA_VISIBLE_DEVICES"])
+
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    for gpu in gpus:
+        if flags.FLAGS.gpu_memory_growth:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        if flags.FLAGS.gpu_memory_limit > 0:
+            tf.config.experimental.set_virtual_device_configuration(gpu, [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=flags.FLAGS.gpu_memory_limit)])
+
+    #
+    # if not flags.FLAGS.gpu_devices:
+    #     tf.config.experimental.set_visible_devices([], 'GPU')
+    # elif flags.FLAGS.gpu_devices and gpus:
+    #     tf.config.experimental.set_visible_devices(gpus, 'GPU')
+
+    if flags.FLAGS.force_eager:
+        tf.config.experimental_run_functions_eagerly(run_eagerly=True)
+
+
+set_run_config()
 
 
 class TrainerBase(object):
@@ -82,7 +111,7 @@ class TrainerBase(object):
         else:
             self.tee = None
 
-        self.set_run_config()
+        # self.set_run_config()
         flags.print_flags()
         self._input_fn_generator = None
         self._model_class = None
@@ -209,10 +238,6 @@ class TrainerBase(object):
         print("Export saved_model to: {}".format(os.path.join(flags.FLAGS.checkpoint_dir, "export")))
         self._model.graph_train.save(os.path.join(flags.FLAGS.checkpoint_dir, "export"))
 
-    def set_run_config(self):
-        if flags.FLAGS.force_eager:
-            tf.config.experimental_run_functions_eagerly(run_eagerly=True)
 
-        gpu_list = ','.join(str(x) for x in flags.FLAGS.gpu_devices)
-        os.environ["CUDA_VISIBLE_DEVICES"] = gpu_list
-        print("GPU-DEVICES:", os.environ["CUDA_VISIBLE_DEVICES"])
+
+

@@ -8,6 +8,7 @@ from input_fn.input_fn_generator_base import InputFnBase
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
+
 class InputFn2DT(InputFnBase):
     """Input Function Generator for 2d triangle problems,  dataset returns a dict..."""
 
