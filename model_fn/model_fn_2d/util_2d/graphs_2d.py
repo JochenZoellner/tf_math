@@ -76,9 +76,10 @@ class GraphMultiFF(Graph2D):
         self.graph_params = update_params(self.graph_params, self._flags.graph_params, "graph")
 
         # initilize keras layer
-        self._tracked_layers["batch_norm"] = tf.keras.layers.BatchNormalization(axis=2)
-        # if self.global_epoch >= 2:
-        #     self._tracked_layers["batch_norm"].trainable = True
+        if self.graph_params["batch_norm"]:
+            self._tracked_layers["batch_norm"] = tf.keras.layers.BatchNormalization(axis=2)
+            if self.global_epoch >= 2:
+                self._tracked_layers["batch_norm"].trainable = True
         self._tracked_layers["flatten_1"] = tf.keras.layers.Flatten()
         # loop over all number in self.graph_params["dense_layers"]
         for layer_index, n_hidden in enumerate(self.graph_params["dense_layers"]):
@@ -105,10 +106,9 @@ class GraphMultiFF(Graph2D):
         # plt.show()
         # if self.global_epoch > tf.constant(2, tf.int64):
         #     self._tracked_layers["batch_norm"].trainable = False
-        # print(inputs["fc"][:, 1:])
-        ff_in = self._tracked_layers["batch_norm"](inputs["fc"][:, 1:], training)
-        # ff_in = inputs["fc"][:, 1:]
-
+        ff_in = inputs["fc"][:, 1:]
+        if self.graph_params["batch_norm"]:
+            ff_in = self._tracked_layers["batch_norm"](ff_in, training)
 
         # plt.figure(2)
         # plt.plot(fc[0, 0], ff_in[0, 0], label="real")

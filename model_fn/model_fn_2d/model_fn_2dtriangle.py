@@ -5,6 +5,7 @@ import shutil
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from shapely import geometry
 
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as t2d
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tf_polygon_2d_helper as tf_p2d
@@ -68,12 +69,14 @@ class ModelTriangle(ModelBase):
         fc = tf.cast(predictions['fc'], dtype=self.mydtype)
         pre_points = tf.cast(tf.reshape(predictions['pre_points'], [-1, 3, 2]), dtype=self.mydtype)
         pre_points = tf_p2d.make_positiv_orientation(pre_points, dtype=self.mydtype)
-        res_scatter = self.scatter_polygon_tf(points_tf=pre_points)
-        res_scatter_normed = tf.cast(self._graph._tracked_layers["batch_norm"](tf.cast(res_scatter, dtype=tf.float32)), dtype=self.mydtype)
-        fc_normed = tf.cast(self._graph._tracked_layers["batch_norm"](tf.cast(fc[:, 1:, :], dtype=tf.float32)), dtype=self.mydtype)
+        pre_in = self.scatter_polygon_tf(points_tf=pre_points)
+        tgt_in = fc[:, 1:, :]
+        if "batch_norm" in self._flags.graph_params and self._flags.graph_params["batch_norm"]:
+            pre_in = tf.cast(self._graph._tracked_layers["batch_norm"](tf.cast(pre_in, dtype=tf.float32)), dtype=self.mydtype)
+            tgt_in = tf.cast(self._graph._tracked_layers["batch_norm"](tf.cast(fc[:, 1:, :], dtype=tf.float32)), dtype=self.mydtype)
 
-        ### plot
-        # fig, (ax1, ax2) = plt.subplots(nrows=2)
+        # ### plot
+        # fig, (ax1, ax2, ax3) = plt.subplots(nrows=3)
         # fig.suptitle("compare loss")
         # ax1.set_title("real")
         # ax1.plot(fc[0, 0, :], fc_normed[0, 0, :], label="normed_input")
@@ -83,9 +86,28 @@ class ModelTriangle(ModelBase):
         # ax2.plot(fc[0, 0, :], fc_normed[0, 1, :], label="normed_input")
         # ax2.plot(fc[0, 0, :], res_scatter_normed[0, 1, :], label="normed_reconstruction")
         # ax2.legend()
+        #
+        # pre_points = pre_points[0]
+        # tgt_points = targets["points"][0]
+        # # print(pre_points)
+        # # print(tgt_points)
+        # pre_polygon = geometry.Polygon([pre_points[0], pre_points[1], pre_points[2]])
+        # tgt_polygon = geometry.Polygon([tgt_points[0], tgt_points[1], tgt_points[2]])
+        # # print(pre_points, tgt_points)
+        # # print(i)
+        # intersetion_area = pre_polygon.intersection(tgt_polygon).area
+        # union_area = pre_polygon.union(tgt_polygon).area
+        # # iou_arr = intersetion_area / union_area
+        # # tgt_area_arr = tgt_polygon.area
+        # # pre_area_arr = pre_polygon.area
+        # ax3.fill(tgt_points.numpy().transpose()[0], tgt_points.numpy().transpose()[1], "b", pre_points.numpy().transpose()[0],
+        #          pre_points.numpy().transpose()[1], "r", alpha=0.5)
+        # ax3.set_aspect(1.0)
+        # ax3.set_xlim(-50, 50)
+        # ax3.set_ylim(-50, 50)
         # plt.show()
         ### end plot
-        loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(res_scatter_normed, fc_normed))
+        loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in, tgt_in))
         targets_oriented = tf_p2d.make_positiv_orientation(targets["points"], dtype=self.mydtype)
         loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)), self.mydtype)
         # tf.print("input_diff-loss", loss_input_diff)
@@ -187,7 +209,7 @@ class ModelTriangle(ModelBase):
         sample_counter = 0
         import matplotlib.pyplot as plt
 
-        from shapely import geometry
+
         summary_lenght = len(self._summary_object["tgt_points"])
         print("summary length: {}".format(summary_lenght))
 

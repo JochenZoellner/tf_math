@@ -4,7 +4,7 @@ ID=$1
 shift
 EPOCH=100
 set -xe
-DATASET="t2d_tf_316_1M"
+DATASET="t2d_tf_316_1M_po"
 DATALEN=316
 PARAMS="
   --train_lists lists/${DATASET}_train.lst
@@ -18,7 +18,6 @@ PARAMS="
   --loss_mode point_diff
   --input_fn_params min_fov=1.0 max_fov=180.0
   --gpu_devices 0
-  --optimizer_params learning_rate=0.001 lr_decay_rate=0.999
 "
 
 PYTHONPATH=/home/$USER/devel/projects/projectneiss2d/tf_neiss:$PYTHONPATH python -u ./tf_neiss/trainer/trainer_types/trainer_2dt/trainer_triangle2d.py ${PARAMS} "$@"
