@@ -28,9 +28,12 @@ class GraphBase(tf.keras.Model):
         return self._global_step
 
     def set_interface(self, val_dataset):
+        from tensorflow.keras import backend as K
+
+        K.set_learning_phase(1)
         build_inputs = next(iter(val_dataset))[0]
-        build_out = self.call(build_inputs, training=False)
-        self._set_inputs(inputs=build_inputs, training=False)
+        build_out = self.call(build_inputs, training=True)
+        self._set_inputs(inputs=build_inputs, training=True)
         self.outputs = list()
         self.output_names = list()
         for key in sorted(list(self._graph_out)):

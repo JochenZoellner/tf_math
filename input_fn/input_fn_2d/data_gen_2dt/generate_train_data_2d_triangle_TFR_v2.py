@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     flags.print_flags()
     timer1 = time.time()
-    dphi = 0.1
+    dphi = 0.01
     complex_phi = flags.FLAGS.complex_phi
     # complex_phi = False
 

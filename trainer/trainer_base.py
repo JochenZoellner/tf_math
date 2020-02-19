@@ -156,7 +156,8 @@ class TrainerBase(object):
             print("restore from checkpoint: {}".format(flags.FLAGS.checkpoint_dir))
             checkpoint_obj.restore(tf.train.latest_checkpoint(flags.FLAGS.checkpoint_dir))
         if self._model.graph_train.global_epoch.numpy() >= self._flags.epochs:
-            print('Loaded model already in epoch {}. Evaluation...'.format(self._model.graph_train.global_epoch.numpy()))
+            print('Loaded model already in epoch {}. Evaluation...'.format(
+                self._model.graph_train.global_epoch.numpy()))
             self.eval()  # run eval() if epochs reach on first attempt
             self.export()
             return 0
@@ -166,22 +167,38 @@ class TrainerBase(object):
         if not self._train_dataset:
             self._train_dataset = self._input_fn_generator.get_input_fn_train()
 
+        train_step_signature = self._model.get_call_graph_signature()
+
+        @tf.function(input_signature=train_step_signature)
+        def _train_step_intern(input_features_, targets_):
+            with tf.GradientTape() as self.tape:
+                self._model.graph_train._graph_out = self._model.graph_train(input_features_, training=True)
+                loss = self._model.loss(predictions=self._model.graph_train._graph_out, targets=targets_)
+                gradients = self.tape.gradient(loss, self._model.graph_train.trainable_variables)
+                self._model.optimizer.apply_gradients(zip(gradients, self._model.graph_train.trainable_variables))
+                self._model.graph_train.global_step.assign(self._model.optimizer.iterations)
+                self._model.graph_train._graph_out["loss"] = tf.reduce_mean(loss)
+            return self._model.graph_train._graph_out
+
         while True:
             if self._model.graph_train.global_epoch.numpy() >= self._flags.epochs:
                 break
             self.epoch_loss = 0.0
             t1 = time.time()
             self._model.set_mode("train")
+            train_batch_number = 0
             for (batch, (input_features, targets)) in enumerate(self._input_fn_generator.get_input_fn_train()):
+
                 # do the _train_step as tf.function to improve performance
-                train_out_dict = self._train_step(input_features, targets)
+                train_out_dict = _train_step_intern(input_features, targets)
                 self._model.to_tensorboard(train_out_dict, targets, input_features)
                 self.epoch_loss += train_out_dict["loss"]
+                train_batch_number = batch
                 if batch + 1 >= int(self._flags.samples_per_epoch / self._flags.train_batch_size):
                     # stop endless '.repeat()' dataset with break
                     break
 
-            self.epoch_loss /= float(batch + 1.0)
+            self.epoch_loss /= float(train_batch_number + 1.0)
             self._model.graph_train.global_epoch.assign_add(1)
             print("\nEPOCH:   {:10.0f}, optimizer steps: {:9}".format(self._model.graph_train.global_epoch.numpy(),
                                                                       self._model.graph_train.global_step.numpy()))
@@ -195,22 +212,35 @@ class TrainerBase(object):
             self._model.set_mode("eval")
             self.eval()
             self._model.write_tensorboard()
+            if self._model.graph_train.global_epoch.numpy() == 2:
+                print("Rebuild graph")
+                self._model.graph_train = self._model.get_graph()
+                self._model.set_optimizer()
+                self._model.set_interface(self._input_fn_generator.get_input_fn_val())
+                checkpoint_obj = tf.train.Checkpoint(step=self._model.graph_train.global_step,
+                                                     optimizer=self._model.optimizer,
+                                                     model=self._model.graph_train)
+                checkpoint_manager = tf.train.CheckpointManager(checkpoint=checkpoint_obj,
+                                                                directory=flags.FLAGS.checkpoint_dir,
+                                                                max_to_keep=1)
+                checkpoint_obj.restore(tf.train.latest_checkpoint(flags.FLAGS.checkpoint_dir))
+
+                @tf.function(input_signature=train_step_signature)
+                def _train_step_intern(input_features_, targets_):
+                    with tf.GradientTape() as self.tape:
+                        self._model.graph_train._graph_out = self._model.graph_train(input_features_, training=True)
+                        loss = self._model.loss(predictions=self._model.graph_train._graph_out, targets=targets_)
+                        gradients = self.tape.gradient(loss, self._model.graph_train.trainable_variables)
+                        self._model.optimizer.apply_gradients(
+                            zip(gradients, self._model.graph_train.trainable_variables))
+                        self._model.graph_train.global_step.assign(self._model.optimizer.iterations)
+                        self._model.graph_train._graph_out["loss"] = tf.reduce_mean(loss)
+                    return self._model.graph_train._graph_out
+
+                self._model.graph_eval = None
+                self._checkpoint_obj_val = None
 
         self.export()
-
-    @tf.function
-    def _train_step(self, input_features, targets):
-        with tf.GradientTape() as self._tape:
-            self._model.graph_train._graph_out = self._model.graph_train(input_features, training=True)
-            loss = self._model.loss(predictions=self._model.graph_train._graph_out, targets=targets)
-            # tf.print("loss:",loss)
-            gradients = self._tape.gradient(loss, self._model.graph_train.trainable_variables)
-            # vars = self._model.graph_train.trainable_variables
-            # for i in vars:
-            #     tf.print(i.name, tf.math.reduce_variance(i))
-            self._model.optimizer.apply_gradients(zip(gradients, self._model.graph_train.trainable_variables))
-            self._model.graph_train.global_step.assign(self._model.optimizer.iterations)
-        return {"loss": tf.reduce_mean(loss)}
 
     def eval(self):
         if not self._model:
@@ -223,15 +253,25 @@ class TrainerBase(object):
         self._checkpoint_obj_val.restore(tf.train.latest_checkpoint(flags.FLAGS.checkpoint_dir))
         val_loss = 0.0
         t_val = time.time()
+        call_graph_signature = self._model.get_call_graph_signature()
+
+        @tf.function(input_signature=call_graph_signature)
+        def call_graph(input_features_, targets_):
+            self._model.graph_eval._graph_out = self._model.graph_eval(input_features_, training=False)
+            loss_ = self._model.loss(predictions=self._model.graph_eval._graph_out, targets=targets_)
+            self._model.graph_eval._graph_out["loss"] = tf.reduce_mean(loss_)
+            return self._model.graph_eval._graph_out
+
+        val_batch_number = 0
         for (batch, (input_features, targets)) in enumerate(self._input_fn_generator.get_input_fn_val()):
-            self._model.graph_eval._graph_out = self._model.graph_eval(input_features, training=False)
-            loss = self._model.loss(predictions=self._model.graph_eval._graph_out, targets=targets)
-            self._model.graph_eval._graph_out["loss"] = loss
-            self._model.to_tensorboard(self._model.graph_eval._graph_out, targets, input_features)
-            val_loss += tf.reduce_mean(loss)
-        val_loss /= float(batch + 1.0)
-        print("val-loss:{:10.3f}, samples/seconde:{:8.1f}, time:{:6.1f}"
-              .format(val_loss, (batch + 1) * flags.FLAGS.val_batch_size / (time.time() - t_val), time.time() - t_val))
+            eval_out_dict = call_graph(input_features, targets)
+            self._model.to_tensorboard(eval_out_dict, targets, input_features)
+            val_loss += eval_out_dict["loss"]
+            val_batch_number = batch
+        val_loss /= float(val_batch_number + 1.0)
+        print("val-loss:{:10.3f}, samples/second:{:8.1f}, time:{:6.1f}"
+              .format(val_loss, (val_batch_number + 1) * flags.FLAGS.val_batch_size /
+                      (time.time() - t_val), time.time() - t_val))
 
     def export(self):
         # Export as saved model

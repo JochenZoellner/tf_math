@@ -68,7 +68,10 @@ class ModelTriangle(ModelBase):
         pre_points = tf.cast(tf.reshape(predictions['pre_points'], [-1, 3, 2]), dtype=self.mydtype)
         pre_points = make_positiv_orientation(pre_points, dtype=self.mydtype)
         res_scatter = self.scatter_polygon_tf(points_tf=pre_points)
-        loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(res_scatter, fc[:, 1:, :]))
+        res_scatter_normed = tf.cast(self._graph._tracked_layers["batch_norm"](tf.cast(res_scatter, dtype=tf.float32)), dtype=self.mydtype)
+        fc_normed = tf.cast(self._graph._tracked_layers["batch_norm"](tf.cast(fc[:, 1:, :], dtype=tf.float32)), dtype=self.mydtype)
+
+        loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(res_scatter_normed, fc_normed))
         targets_oriented = make_positiv_orientation(targets["points"], dtype=self.mydtype)
         loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)), self.mydtype)
         # tf.print("input_diff-loss", loss_input_diff)

@@ -3,6 +3,8 @@ import tensorflow as tf
 import model_fn.util_model_fn.keras_compatible_layers as layers
 from model_fn.graph_base import GraphBase
 from util.flags import update_params
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 class Graph2D(GraphBase):
@@ -74,6 +76,9 @@ class GraphMultiFF(Graph2D):
         self.graph_params = update_params(self.graph_params, self._flags.graph_params, "graph")
 
         # initilize keras layer
+        self._tracked_layers["batch_norm"] = tf.keras.layers.BatchNormalization(axis=2)
+        if self.global_epoch >= 2:
+            self._tracked_layers["batch_norm"].trainable = False
         self._tracked_layers["flatten_1"] = tf.keras.layers.Flatten()
         # loop over all number in self.graph_params["dense_layers"]
         for layer_index, n_hidden in enumerate(self.graph_params["dense_layers"]):
@@ -90,7 +95,28 @@ class GraphMultiFF(Graph2D):
 
     @tf.function
     def call(self, inputs, training=False, build=None):
-        ff_in = self._tracked_layers["flatten_1"](inputs["fc"])
+
+        # plt.figure(1)
+        # fc = inputs["fc"]
+        # fc = np.ma.masked_where(np.broadcast_to(fc[:, :1, ] == 0.0, shape=(fc.shape[0], 3, fc.shape[2])), fc)
+        #
+        # plt.plot(fc[0, 0], fc[0, 1], label="real")
+        # plt.plot(fc[0, 0], fc[0, 2], label="imag")
+        # plt.show()
+        # if self.global_epoch > tf.constant(2, tf.int64):
+        #     self._tracked_layers["batch_norm"].trainable = False
+        # print(inputs["fc"][:, 1:])
+        ff_in = self._tracked_layers["batch_norm"](inputs["fc"][:, 1:], training)
+        # ff_in = inputs["fc"][:, 1:]
+
+
+        # plt.figure(2)
+        # plt.plot(fc[0, 0], ff_in[0, 0], label="real")
+        # plt.plot(fc[0, 0], ff_in[0, 1], label="imag")
+        # plt.show()
+
+        ff_in = self._tracked_layers["flatten_1"](ff_in)
+
         if training and self.graph_params["input_dropout"] > 0:
             ff_in = tf.nn.dropout(ff_in, rate=self.graph_params["input_dropout"])
         # loop over all number in self.graph_params["dense_layers"]
