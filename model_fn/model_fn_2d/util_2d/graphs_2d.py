@@ -77,8 +77,8 @@ class GraphMultiFF(Graph2D):
 
         # initilize keras layer
         self._tracked_layers["batch_norm"] = tf.keras.layers.BatchNormalization(axis=2)
-        if self.global_epoch >= 2:
-            self._tracked_layers["batch_norm"].trainable = True
+        # if self.global_epoch >= 2:
+        #     self._tracked_layers["batch_norm"].trainable = True
         self._tracked_layers["flatten_1"] = tf.keras.layers.Flatten()
         # loop over all number in self.graph_params["dense_layers"]
         for layer_index, n_hidden in enumerate(self.graph_params["dense_layers"]):

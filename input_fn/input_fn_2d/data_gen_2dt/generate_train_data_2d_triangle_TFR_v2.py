@@ -13,15 +13,15 @@ import tensorflow as tf
 import util.flags as flags
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tfr_helper as tfr_helper
 import model_fn.util_model_fn.custom_layers as c_layer
-from util.misc import get_commit_id
+
+from util.misc import get_commit_id, Tee
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or any {'0', '1', '2'} set tensorflow logleve 2=warning
 
 
 # ========
 flags.define_string("data_id", "magic_synthetic_dataset", "select a name unique name for the dataset")
-flags.define_boolean("to_log_file", False,
-                     "if set redirect stdout & stderr to this file in data/syntetic_data/<data_id>/<log-file.log>")
+flags.define_string('print_to', 'console', 'write prints to "console, "file", "both"')
 flags.define_boolean("complex_phi", False, "use values for a and b not depending from phi")
 flags.define_string("mode", "val", "select 'val' or 'train'")
 flags.define_list('files_train_val', int, "[int(train_files), int(val_files)]",
@@ -31,16 +31,17 @@ flags.define_integer("jobs", -1, "set number of samples saved in each file")
 
 if __name__ == "__main__":
     main_data_out = "data/synthetic_data/{}".format(flags.FLAGS.data_id)
-    original_out = sys.stdout
-    original_err = sys.stderr
-    if flags.FLAGS.to_log_file:
-        logfile_path = os.path.join(main_data_out, "log_{}_{}.txt".format(flags.FLAGS.data_id, flags.FLAGS.mode))
-        if not os.path.isdir(os.path.dirname(logfile_path)):
-            os.makedirs(os.path.dirname(logfile_path))
-        print("redirect messages to: {}".format(logfile_path))
-        log_file_object = open(logfile_path, 'w')
-        sys.stdout = log_file_object
-        sys.stderr = log_file_object
+
+    tee_path = os.path.join(main_data_out, "log_{}_{}.txt".format(flags.FLAGS.data_id, flags.FLAGS.mode))
+    if not os.path.isdir(os.path.dirname(tee_path)):
+        os.makedirs(os.path.dirname(tee_path))
+    if flags.FLAGS.print_to == "file":
+        print("redirect messages to: {}".format(tee_path))
+        tee = Tee(tee_path, console=False, delete_existing=True)
+    elif flags.FLAGS.print_to == "both":
+        tee = Tee(tee_path, console=True, delete_existing=True)
+    else:
+        tee = None
 
     print("run IS2d_triangle")
     commit_id, repos_path = get_commit_id(os.path.realpath(__file__))
@@ -99,6 +100,7 @@ if __name__ == "__main__":
     # pool.close()
     for i in filename_list:
         t2d_saver_obj.save_file_tf(i)
+
     print("  Time for data generation: {:0.1f}".format(time.time() - timer1))
     print("  Done.")
 
@@ -131,9 +133,7 @@ if __name__ == "__main__":
         file_object.writelines([str(x) + "\n" for x in filename_list])
     print("date+id: {}".format(datetime.datetime.now().strftime('%Y%m-%d%H-%M%S-') + str(uuid.uuid4())))
     print("  Done.")
-    if flags.FLAGS.to_log_file:
-        sys.stdout = original_out
-        sys.stderr = original_err
+
     print("Finished.")
 
     # data_path = filename_list

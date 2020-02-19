@@ -139,7 +139,7 @@ class Triangle2dSaver(object):
             point_list.append(points)
 
         batch_points = np.stack(point_list)
-        batch_points = tf_p2d.make_positiv_orientation(batch_points)
+        batch_points = tf_p2d.make_positiv_orientation(batch_points).numpy()
         fc_arr = fc_obj(batch_points)
 
         with tf.io.TFRecordWriter(filename) as writer:
