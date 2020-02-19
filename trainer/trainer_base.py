@@ -22,8 +22,8 @@ flags.define_string('optimizer', 'FinalDecayOptimizer', 'the optimizer used to c
 flags.define_dict('optimizer_params', {}, "key=value pairs defining the configuration of the optimizer.")
 flags.define_dict('input_fn_params', {}, "key=value pairs defining the configuration of the optimizer.")
 
-flags.define_string('learn_rate_schedule', "decay", 'decay, finaldecay, warmupfinaldecay')
-flags.define_dict("learn_rate_params", {}, "key=value pairs defining the configuration of the learn_rate_schedule.")
+# flags.define_string('learn_rate_schedule', "decay", 'decay, finaldecay, warmupfinaldecay')
+# flags.define_dict("learn_rate_params", {}, "key=value pairs defining the configuration of the learn_rate_schedule.")
 # flags.define_string('train_scopes', '', 'Change only variables in this scope during training')
 flags.define_integer('eval_every_n', 1, "Evaluate/Validate every 'n' epochs")  # Todo: to be implemented
 flags.define_string('checkpoint_dir', '', 'Checkpoint to save model information in.')
@@ -31,6 +31,7 @@ flags.define_string('checkpoint_dir', '', 'Checkpoint to save model information 
 #                                          'then this one is used).')
 flags.define_boolean('reset_global_step', False, 'resets global_step, this restarts the learning_rate decay,'
                                                  'only works with load from warmstart_dir')  # Todo: to be implemented
+flags.define_boolean('rebuilt', False, 'rebuilt model after 2 epochs, to freeze batchnorm')  # Todo: to be implemented
 
 flags.define_list('train_lists', str, 'space seperated list of training sample lists',
                   "names of the training sample lists to use. You can provide a single list as well. ",
@@ -65,7 +66,8 @@ flags.define_list('gpu_devices', int, 'space seperated list of GPU indices to us
 # flags.define_boolean('gpu_auto_tune', False, 'GPU auto tune (default: %(default)s)')
 
 flags.define_float('gpu_memory_limit', -1, 'set gpu memory in MB allocated on each (allowed) gpu '
-                                           'KEEP IN MIND: there are around 350 MB overhead per process ')
+                                           'KEEP IN MIND: there are around 350 MB overhead per process,'
+                                           'NOTE: this disables memory growth!')
 flags.define_float('gpu_memory_growth', True, 'allocate only the needed memory within memory-limit')
 flags.define_string('print_to', 'console', 'write prints to "console, "file", "both"')
 flags.define_boolean("tensorboard", True, "if True: write tensorboard logs")
@@ -102,11 +104,11 @@ set_run_config()
 class TrainerBase(object):
     def __init__(self):
         self._flags = flags.FLAGS
-        tee_path = os.path.join(os.path.dirname(flags.FLAGS.checkpoint_dir),
-                                "log_" + os.path.basename(flags.FLAGS.checkpoint_dir) + ".txt")
-        if flags.FLAGS.print_to == "file":
+        tee_path = os.path.join(os.path.dirname(self._flags.checkpoint_dir),
+                                "log_" + os.path.basename(self._flags.checkpoint_dir) + ".txt")
+        if self._flags.print_to == "file":
             self.tee = Tee(tee_path, console=False, delete_existing=False)
-        elif flags.FLAGS.print_to == "both":
+        elif self._flags.print_to == "both":
             self.tee = Tee(tee_path, console=True, delete_existing=False)
         else:
             self.tee = None
@@ -149,12 +151,12 @@ class TrainerBase(object):
 
         checkpoint_obj = tf.train.Checkpoint(step=self._model.graph_train.global_step, optimizer=self._model.optimizer,
                                              model=self._model.graph_train)
-        checkpoint_manager = tf.train.CheckpointManager(checkpoint=checkpoint_obj, directory=flags.FLAGS.checkpoint_dir,
+        checkpoint_manager = tf.train.CheckpointManager(checkpoint=checkpoint_obj, directory=self._flags.checkpoint_dir,
                                                         max_to_keep=1)
 
-        if tf.train.get_checkpoint_state(flags.FLAGS.checkpoint_dir):
-            print("restore from checkpoint: {}".format(flags.FLAGS.checkpoint_dir))
-            checkpoint_obj.restore(tf.train.latest_checkpoint(flags.FLAGS.checkpoint_dir))
+        if tf.train.get_checkpoint_state(self._flags.checkpoint_dir):
+            print("restore from checkpoint: {}".format(self._flags.checkpoint_dir))
+            checkpoint_obj.restore(tf.train.latest_checkpoint(self._flags.checkpoint_dir))
         if self._model.graph_train.global_epoch.numpy() >= self._flags.epochs:
             print('Loaded model already in epoch {}. Evaluation...'.format(
                 self._model.graph_train.global_epoch.numpy()))
@@ -203,7 +205,7 @@ class TrainerBase(object):
             print("\nEPOCH:   {:10.0f}, optimizer steps: {:9}".format(self._model.graph_train.global_epoch.numpy(),
                                                                       self._model.graph_train.global_step.numpy()))
             print("train-loss:{:8.3f}, samples/seconde:{:8.1f}, time:{:6.1f}"
-                  .format(self.epoch_loss, flags.FLAGS.samples_per_epoch / (time.time() - t1), time.time() - t1))
+                  .format(self.epoch_loss, self._flags.samples_per_epoch / (time.time() - t1), time.time() - t1))
             # Save checkpoint each epoch
             checkpoint_manager.save()
             self._model.write_tensorboard()
@@ -212,7 +214,7 @@ class TrainerBase(object):
             self._model.set_mode("eval")
             self.eval()
             self._model.write_tensorboard()
-            if self._model.graph_train.global_epoch.numpy() == 2:
+            if self._flags.rebuilt and self._model.graph_train.global_epoch.numpy() == 2:
                 print("Rebuild graph")
                 self._model.graph_train = self._model.get_graph()
                 self._model.set_optimizer()
@@ -221,9 +223,9 @@ class TrainerBase(object):
                                                      optimizer=self._model.optimizer,
                                                      model=self._model.graph_train)
                 checkpoint_manager = tf.train.CheckpointManager(checkpoint=checkpoint_obj,
-                                                                directory=flags.FLAGS.checkpoint_dir,
+                                                                directory=self._flags.checkpoint_dir,
                                                                 max_to_keep=1)
-                checkpoint_obj.restore(tf.train.latest_checkpoint(flags.FLAGS.checkpoint_dir))
+                checkpoint_obj.restore(tf.train.latest_checkpoint(self._flags.checkpoint_dir))
 
                 @tf.function(input_signature=train_step_signature)
                 def _train_step_intern(input_features_, targets_):
@@ -250,7 +252,7 @@ class TrainerBase(object):
         if not self._checkpoint_obj_val:
             self._checkpoint_obj_val = tf.train.Checkpoint(model=self._model.graph_eval)
 
-        self._checkpoint_obj_val.restore(tf.train.latest_checkpoint(flags.FLAGS.checkpoint_dir))
+        self._checkpoint_obj_val.restore(tf.train.latest_checkpoint(self._flags.checkpoint_dir))
         val_loss = 0.0
         t_val = time.time()
         call_graph_signature = self._model.get_call_graph_signature()
@@ -270,13 +272,13 @@ class TrainerBase(object):
             val_batch_number = batch
         val_loss /= float(val_batch_number + 1.0)
         print("val-loss:{:10.3f}, samples/second:{:8.1f}, time:{:6.1f}"
-              .format(val_loss, (val_batch_number + 1) * flags.FLAGS.val_batch_size /
+              .format(val_loss, (val_batch_number + 1) * self._flags.val_batch_size /
                       (time.time() - t_val), time.time() - t_val))
 
     def export(self):
         # Export as saved model
-        print("Export saved_model to: {}".format(os.path.join(flags.FLAGS.checkpoint_dir, "export")))
-        self._model.graph_train.save(os.path.join(flags.FLAGS.checkpoint_dir, "export"))
+        print("Export saved_model to: {}".format(os.path.join(self._flags.checkpoint_dir, "export")))
+        self._model.graph_train.save(os.path.join(self._flags.checkpoint_dir, "export"))
 
 
 

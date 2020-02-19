@@ -25,7 +25,7 @@ class InputFn2DT(InputFnBase):
             self._min_fov = self._input_params["min_fov"]
             self._max_fov = self._input_params["max_fov"]
 
-    def cut_phi_batch(self, batch):
+    def cut_phi_batch(self, batch, min_fov=None, max_fov=None):
         """
 
         :param batch: array [batch, (phi, real, imag), phi_vec_len]
@@ -34,9 +34,15 @@ class InputFn2DT(InputFnBase):
         :param max_fov: full field of view keept (min_fov < max_fov < 180) for half-room
         :return:
         """
+        if not min_fov:
+            min_fov = self._min_fov
+
+        if not max_fov:
+            max_fov = self._max_fov
+
         phi_vec = batch["fc"][0, 0, :]
-        max_fov = self._max_fov / 180.0 * np.pi  # max_angle_of_view_cut_rad
-        min_fov = self._min_fov / 180.0 * np.pi  # hole
+        max_fov = max_fov / 180.0 * np.pi  # max_angle_of_view_cut_rad
+        min_fov = min_fov / 180.0 * np.pi  # hole
         outer_cut = (np.pi - max_fov) / 2.0
         inner_cut = min_fov / 2.0
         lower_block = tf.logical_and(phi_vec >= outer_cut, phi_vec < (np.pi / 2.0 - inner_cut))

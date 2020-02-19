@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.polygone_2d_helper as polygon2d
+import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tf_polygon_2d_helper as tf_p2d
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as t2d
 import model_fn.util_model_fn.custom_layers as c_layers
 
@@ -138,7 +139,8 @@ class Triangle2dSaver(object):
             point_list.append(points)
 
         batch_points = np.stack(point_list)
-        fc_arr = fc_obj.__call__(batch_points)
+        batch_points = tf_p2d.make_positiv_orientation(batch_points)
+        fc_arr = fc_obj(batch_points)
 
         with tf.io.TFRecordWriter(filename) as writer:
             for i in range(self.samples_per_file):
