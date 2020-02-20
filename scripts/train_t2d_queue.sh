@@ -25,6 +25,7 @@ PYTHONPATH=/home/$USER/devel/projects/projectneiss2d/tf_neiss:$PYTHONPATH python
 LAV_PARAMS="
   --val_list lists/${DATASET}_val.lst
   --model_dir models/dataset_${DATASET}/${ID}
+  --input_fn_params min_fov=1.0 max_fov=180.0
   --data_len ${DATALEN}
   --batch_limiter 1
   "

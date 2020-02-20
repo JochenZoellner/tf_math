@@ -79,12 +79,12 @@ class ModelTriangle(ModelBase):
         # fig, (ax1, ax2, ax3) = plt.subplots(nrows=3)
         # fig.suptitle("compare loss")
         # ax1.set_title("real")
-        # ax1.plot(fc[0, 0, :], fc_normed[0, 0, :], label="normed_input")
-        # ax1.plot(fc[0, 0, :], res_scatter_normed[0, 0, :], label="normed_reconstruction")
+        # ax1.plot(fc[0, 0, :], tgt_in[0, 0, :], label="normed_input")
+        # ax1.plot(fc[0, 0, :], pre_in[0, 0, :], label="normed_reconstruction")
         # ax1.legend()
         # ax2.set_title("imag")
-        # ax2.plot(fc[0, 0, :], fc_normed[0, 1, :], label="normed_input")
-        # ax2.plot(fc[0, 0, :], res_scatter_normed[0, 1, :], label="normed_reconstruction")
+        # ax2.plot(fc[0, 0, :], tgt_in[0, 1, :], label="normed_input")
+        # ax2.plot(fc[0, 0, :], pre_in[0, 1, :], label="normed_reconstruction")
         # ax2.legend()
         #
         # pre_points = pre_points[0]
