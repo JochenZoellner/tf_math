@@ -1,9 +1,14 @@
 import logging
+import time
+
 import tensorflow as tf
 import numpy as np
 
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tfr_helper as tfr_helper
 from input_fn.input_fn_generator_base import InputFnBase
+import model_fn.util_model_fn.custom_layers as c_layers
+import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tf_polygon_2d_helper as tf_p2d
+import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as t2d
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -19,11 +24,15 @@ class InputFn2DT(InputFnBase):
         self._next_batch = None
         self.dataset = None
         self._input_params = None
+        self._dphi = 0.01
         if self._flags.hasKey("input_fn_params"):
             logger.info("Set input_fn_params")
             self._input_params = self._flags.input_fn_params
-            self._min_fov = self._input_params["min_fov"]
-            self._max_fov = self._input_params["max_fov"]
+            if "min_fov" in self._input_params:
+                self._min_fov = self._input_params["min_fov"]
+            if "max_fov" in self._input_params:
+                self._max_fov = self._input_params["max_fov"]
+
 
     def cut_phi_batch(self, batch, min_fov=None, max_fov=None):
         """
@@ -58,29 +67,64 @@ class InputFn2DT(InputFnBase):
     def tf_cut_phi_batch(self, feature_dict, target_dict):
         return self.cut_phi_batch(feature_dict), target_dict
 
+    def batch_generator(self):
+        _phi_arr = np.arange(0.0, np.pi+self._dphi, self._dphi)
+        D_TYPE = tf.float32
+        phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(_phi_arr, D_TYPE), axis=0), axis=0)
+
+        fc_obj = c_layers.ScatterPolygonTF(phi_tf, dtype=D_TYPE, with_batch_dim=True)
+        point_list = []
+
+        phi_batch = np.broadcast_to(np.expand_dims(_phi_arr, axis=0), (self._flags.train_batch_size,
+                                                                       1,
+                                                                       _phi_arr.shape[0]))
+        while True:
+            point_list = []
+            for i in range(self._flags.train_batch_size):
+                points = t2d.generate_target(x_sorted=True)
+                point_list.append(points)
+
+            batch_points = np.stack(point_list)
+            batch_points = tf_p2d.make_positiv_orientation(batch_points).numpy()
+            fc_arr = fc_obj(batch_points)
+            fc_batch = tf.concat((phi_batch, fc_arr), axis=1)
+            yield {"fc": tf.cast(fc_batch, dtype=tf.float32)}, \
+                  {"points": tf.cast(batch_points, dtype=tf.float32)}
+
     def get_input_fn_train(self):
         # One instance of train dataset to produce infinite many samples
-        assert len(self._flags.train_lists) == 1, "exact one train list is needed for this scenario"
+        if "infinity" in self._flags.train_lists[0]:
+            parsed_dataset_batched = tf.data.Dataset.from_generator(self.batch_generator,
+                                                                    output_types=({"fc": tf.float32}, {"points": tf.float32}),
+                                                                    output_shapes=
+                                                                    ({"fc": (self._flags.train_batch_size, 3, None)},
+                                                                     {"points": (self._flags.train_batch_size, 3, None)}))
+            # parsed_dataset_batched = parsed_dataset_batched.map(lambda y, x: (y, x), num_parallel_calls=8)
 
-        with open(self._flags.train_lists[0], "r") as tr_fobj:
-            train_filepath_list = [x.strip("\n") for x in tr_fobj.readlines()]
-
-        raw_dataset = tf.data.TFRecordDataset(train_filepath_list)
-        # print("complex phi in generator", self._flags.complex_phi)
-        if not self._flags.complex_phi:
-            parsed_dataset = raw_dataset.map(tfr_helper.parse_t2d, num_parallel_calls=10)
+            parsed_dataset_batched.map(self.tf_cut_phi_batch, num_parallel_calls=4)
+            return parsed_dataset_batched.prefetch(100)
         else:
-            parsed_dataset = raw_dataset.map(tfr_helper.parse_t2d_phi_complex, num_parallel_calls=10)
+            assert len(self._flags.train_lists) == 1, "exact one train list is needed for this scenario"
+
+            with open(self._flags.train_lists[0], "r") as tr_fobj:
+                train_filepath_list = [x.strip("\n") for x in tr_fobj.readlines()]
+
+            raw_dataset = tf.data.TFRecordDataset(train_filepath_list)
+            # print("complex phi in generator", self._flags.complex_phi)
+            if not self._flags.complex_phi:
+                parsed_dataset = raw_dataset.map(tfr_helper.parse_t2d, num_parallel_calls=10)
+            else:
+                parsed_dataset = raw_dataset.map(tfr_helper.parse_t2d_phi_complex, num_parallel_calls=10)
 
 
-        # parsed_dataset = parsed_dataset.shuffle(buffer_size=1000)
-        parsed_dataset_batched = parsed_dataset.batch(self._flags.train_batch_size)
-        if self._input_params:
-            parsed_dataset_batched = parsed_dataset_batched.map(self.tf_cut_phi_batch)
+            # parsed_dataset = parsed_dataset.shuffle(buffer_size=1000)
+            parsed_dataset_batched = parsed_dataset.batch(self._flags.train_batch_size)
+            if self._input_params:
+                parsed_dataset_batched = parsed_dataset_batched.map(self.tf_cut_phi_batch)
 
-        self.dataset = parsed_dataset_batched.repeat()
+            self.dataset = parsed_dataset_batched.repeat()
 
-        return self.dataset.prefetch(100)
+            return self.dataset.prefetch(100)
 
     def get_input_fn_val(self):
 
@@ -108,10 +152,26 @@ class InputFn2DT(InputFnBase):
         self.dataset = parsed_dataset.batch(batch_size)
         return self.dataset.prefetch(100)
 
+def test_generator():
+    input_fn = InputFn2DT(flags.FLAGS)
+    dataset_train = input_fn.get_input_fn_train()
+    max_batches = 100
+    start_t = time.time()
+    for i, batch in enumerate(dataset_train):
+        if i >= max_batches:
+            break
+        print(i, batch[0]["fc"].shape, batch[1]["points"].shape)
+        # print(batch)
+    t = time.time() - start_t
+    samples = flags.FLAGS.train_batch_size * max_batches
+    print("Time: {}, Samples: {}, S/S: {:0.0f}".format(t, samples, float(samples) / t))
+
 
 if __name__ == "__main__":
+
     import util.flags as flags
     import trainer.trainer_base  # do not remove, needed for flag imports
+    test_generator()
 
     print("run input_fn_generator_2dtriangle debugging...")
 
@@ -136,3 +196,5 @@ if __name__ == "__main__":
     #     # print(tgt["points"])
     #
     # print("Done.")
+
+

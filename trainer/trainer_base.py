@@ -4,6 +4,7 @@ import os
 import time
 
 import tensorflow as tf
+from tensorflow.python.eager import profiler
 
 import util.flags as flags
 from util.misc import get_commit_id, Tee
@@ -49,7 +50,7 @@ flags.define_string('val_list', None, '.lst-file specifying the dataset used for
 flags.define_integer('val_batch_size', 100, 'number of elements in a val_batch between training '
                                             'epochs(default: %(default)s). '
                                             'has no effect if status is not "train"')
-# flags.define_boolean('profile', False, 'produce profile file each epoch')
+flags.define_boolean('profile', False, 'produce profile file each epoch')
 # flags.define_boolean('predict_mode', False, 'If and only if true the prediction will be accomplished, '
 #                                             'predict means no targets provided')
 # flags.define_string('predict_list', '',
@@ -136,6 +137,8 @@ class TrainerBase(object):
         del self.tee
 
     def train(self):
+        if self._flags.profile:
+            profiler.start_profiler_server(6009)
         commit_id, repos_path = get_commit_id(os.path.realpath(__file__))
         print("source code path:{}\ncommit-id: {}".format(repos_path, commit_id))
         print("tf-version: {}".format(tf.__version__))
@@ -189,6 +192,7 @@ class TrainerBase(object):
             t1 = time.time()
             self._model.set_mode("train")
             train_batch_number = 0
+
             for (batch, (input_features, targets)) in enumerate(self._input_fn_generator.get_input_fn_train()):
 
                 # do the _train_step as tf.function to improve performance
