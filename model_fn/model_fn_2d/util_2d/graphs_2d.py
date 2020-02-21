@@ -72,10 +72,14 @@ class GraphMultiFF(Graph2D):
         self.graph_params["edge_classifier"] = False
         self.graph_params["batch_norm"] = False
         self.graph_params["nhidden_max_edges"] = 6
+        self.graph_params["pre_activation"] = None
 
         self.graph_params = update_params(self.graph_params, self._flags.graph_params, "graph")
 
         # initilize keras layer
+
+
+
         if self.graph_params["batch_norm"]:
             self._tracked_layers["batch_norm"] = tf.keras.layers.BatchNormalization(axis=2)
             if self.global_epoch >= 2:
@@ -107,6 +111,8 @@ class GraphMultiFF(Graph2D):
         # if self.global_epoch > tf.constant(2, tf.int64):
         #     self._tracked_layers["batch_norm"].trainable = False
         ff_in = inputs["fc"][:, 1:]
+        if self.graph_params["pre_activation"]:
+            ff_in = getattr(layers, self.graph_params["pre_activation"])(ff_in)
         if self.graph_params["batch_norm"]:
             ff_in = self._tracked_layers["batch_norm"](ff_in, training)
 
