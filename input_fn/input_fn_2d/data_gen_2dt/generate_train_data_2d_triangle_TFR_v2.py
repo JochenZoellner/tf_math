@@ -60,11 +60,7 @@ if __name__ == "__main__":
     # complex_phi = False
 
     if not complex_phi:
-        har = 00.0 / 180.0 * np.pi  # hole_half_angle_rad
-        mac = 00.0 / 180.0 * np.pi  # max_angle_of_view_cut_rad
-        phi_arr = np.concatenate((np.arange(0 + har, np.pi / 2 - mac, dphi),
-                                  np.arange(np.pi / 2 + har, np.pi - mac, dphi)))
-        assert phi_arr.all() == np.arange(0, np.pi, dphi).all()
+        phi_arr = np.arange(dphi, np.pi, dphi)
     else:
         range_arr = (np.arange(10, dtype=np.float32) + 1.0) / 100.0
         zeros_arr = np.zeros_like(range_arr, dtype=np.float32)

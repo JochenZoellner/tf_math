@@ -4,6 +4,11 @@ import time
 import tensorflow as tf
 import numpy as np
 
+if __name__ == "__main__":
+    import util.flags as flags
+    import trainer.trainer_base  # do not remove, needed for flag imports
+    import trainer.trainer_types.trainer_2dt.trainer_triangle2d  # do not remove, needed for flag imports
+
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tfr_helper as tfr_helper
 from input_fn.input_fn_generator_base import InputFnBase
 import model_fn.util_model_fn.custom_layers as c_layers
@@ -68,7 +73,7 @@ class InputFn2DT(InputFnBase):
         return self.cut_phi_batch(feature_dict), target_dict
 
     def batch_generator(self):
-        _phi_arr = np.arange(0.0, np.pi+self._dphi, self._dphi)
+        _phi_arr = np.arange(self._dphi, np.pi, self._dphi)
         D_TYPE = tf.float32
         phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(_phi_arr, D_TYPE), axis=0), axis=0)
 
@@ -101,7 +106,7 @@ class InputFn2DT(InputFnBase):
                                                                      {"points": (self._flags.train_batch_size, 3, None)}))
             # parsed_dataset_batched = parsed_dataset_batched.map(lambda y, x: (y, x), num_parallel_calls=8)
 
-            parsed_dataset_batched.map(self.tf_cut_phi_batch, num_parallel_calls=4)
+            parsed_dataset_batched = parsed_dataset_batched.map(self.tf_cut_phi_batch, num_parallel_calls=4)
             return parsed_dataset_batched.prefetch(100)
         else:
             assert len(self._flags.train_lists) == 1, "exact one train list is needed for this scenario"
@@ -155,22 +160,21 @@ class InputFn2DT(InputFnBase):
 def test_generator():
     input_fn = InputFn2DT(flags.FLAGS)
     dataset_train = input_fn.get_input_fn_train()
-    max_batches = 100
+    max_batches = 1
     start_t = time.time()
     for i, batch in enumerate(dataset_train):
         if i >= max_batches:
             break
         print(i, batch[0]["fc"].shape, batch[1]["points"].shape)
+        print(batch[0]["fc"][0, 0, :])
         # print(batch)
     t = time.time() - start_t
     samples = flags.FLAGS.train_batch_size * max_batches
     print("Time: {}, Samples: {}, S/S: {:0.0f}".format(t, samples, float(samples) / t))
 
-
 if __name__ == "__main__":
 
-    import util.flags as flags
-    import trainer.trainer_base  # do not remove, needed for flag imports
+
     test_generator()
 
     print("run input_fn_generator_2dtriangle debugging...")
