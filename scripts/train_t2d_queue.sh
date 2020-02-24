@@ -4,7 +4,7 @@ ID=$1
 shift
 EPOCH=100
 set -xe
-DATASET="t2d_tf_316_1M_po"
+DATASET="t2d_tf_314_1M_po"
 DATALEN=316
 PARAMS="
   --train_lists lists/${DATASET}_train.lst
