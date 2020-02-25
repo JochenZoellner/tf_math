@@ -65,15 +65,22 @@ class ModelTriangle(ModelBase):
         self.get_graph().print_params()
 
     def loss(self, predictions, targets):
+        if not self.scatter_polygon_tf:
+            self.scatter_polygon_tf = c_layer.ScatterPolygonTF(fc_tensor=tf.cast(predictions["fc"], dtype=self.mydtype),
+                                                               points_tf=tf.cast(predictions["pre_points"],
+                                                                                 dtype=self.mydtype),
+                                                               with_batch_dim=True, dtype=self.mydtype)
         self._loss = tf.constant(0.0, dtype=self.mydtype)
         fc = tf.cast(predictions['fc'], dtype=self.mydtype)
         pre_points = tf.cast(tf.reshape(predictions['pre_points'], [-1, 3, 2]), dtype=self.mydtype)
         pre_points = tf_p2d.make_positiv_orientation(pre_points, dtype=self.mydtype)
         pre_in = self.scatter_polygon_tf(points_tf=pre_points)
         tgt_in = fc[:, 1:, :]
-        if "batch_norm" in self._flags.graph_params and self._flags.graph_params["batch_norm"]:
-            pre_in = tf.cast(self._graph._tracked_layers["batch_norm"](tf.cast(pre_in, dtype=tf.float32)), dtype=self.mydtype)
-            tgt_in = tf.cast(self._graph._tracked_layers["batch_norm"](tf.cast(fc[:, 1:, :], dtype=tf.float32)), dtype=self.mydtype)
+        # if "batch_norm" in self._flags.graph_params and self._flags.graph_params["batch_norm"]:
+        #     pre_in = tf.cast(self._graph._tracked_layers["batch_norm"](tf.cast(pre_in, dtype=tf.float32)),
+        #                      dtype=self.mydtype)
+        #     tgt_in = tf.cast(self._graph._tracked_layers["batch_norm"](tf.cast(fc[:, 1:, :], dtype=tf.float32)),
+        #                      dtype=self.mydtype)
 
         # ### plot
         # fig, (ax1, ax2, ax3) = plt.subplots(nrows=3)
@@ -109,7 +116,8 @@ class ModelTriangle(ModelBase):
         ### end plot
         loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in, tgt_in))
         targets_oriented = tf_p2d.make_positiv_orientation(targets["points"], dtype=self.mydtype)
-        loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)), self.mydtype)
+        loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)),
+                                  self.mydtype)
         # tf.print("input_diff-loss", loss_input_diff)
         if "input_diff" in self._flags.loss_mode:
             self._loss += loss_input_diff
@@ -209,7 +217,6 @@ class ModelTriangle(ModelBase):
         sample_counter = 0
         import matplotlib.pyplot as plt
 
-
         summary_lenght = len(self._summary_object["tgt_points"])
         print("summary length: {}".format(summary_lenght))
 
@@ -236,12 +243,10 @@ class ModelTriangle(ModelBase):
             pre_area_arr[i] = pre_polygon.area
             # co_loss_arr[i] = self._summary_object["ordered_best"][i]
             # wo_loss_arr[i] = self._summary_object["unordered_best"][i]
-            PLOT = True
+            # PLOT = "stripes"
+            PLOT = "fc"
             if PLOT:
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 14))
-                # fig = plt.figure(figsize=(38, 14))
-                # ax1 = fig.add_subplot(121)
-                # ax2 = fig.add_subplot(122, projection='3d')
 
                 ax1.fill(tgt_points.transpose()[0], tgt_points.transpose()[1], "b", pre_points.transpose()[0],
                          pre_points.transpose()[1], "r", alpha=0.5)
@@ -255,46 +260,50 @@ class ModelTriangle(ModelBase):
                 mac = 00.0 / 180.0 * np.pi  # max_angle_of_view_cut_rad
                 phi_arr = np.concatenate((np.arange(0 + har, np.pi / 2 - mac, dphi),
                                           np.arange(np.pi / 2 + har, np.pi - mac, dphi)))
-                # # target
-                # fc_arr_tgt = t2d.make_scatter_data(tgt_points, epsilon=0.002, phi_arr=phi_arr)
-                # ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
-                # ax2.plot(fc_arr_tgt[0], fc_arr_tgt[2], label="imag_tgt")
-                # ## prediction
-                # fc_arr_pre = t2d.make_scatter_data(pre_points, epsilon=0.002, phi_arr=phi_arr)
-                # ax2.plot(fc_arr_pre[0], fc_arr_pre[1], label="real_pre")
-                # ax2.plot(fc_arr_pre[0], fc_arr_pre[2], label="imag_pre")
-                # ax2.legend(loc=4)
 
-                ## target scatter
-                # phi_3dim = np.abs(phi_arr - np.pi / 2)
-                # fc_arr_tgt = t2d.make_scatter_data(tgt_points, phi_arr=phi_arr, epsilon=0.002)
-                # ## prediction
-                # fc_arr_pre = t2d.make_scatter_data(pre_points, phi_arr=phi_arr, epsilon=0.002)
-                # for idx in range(fc_arr_tgt[2].shape[0]):
-                #     ax2.plot((fc_arr_tgt[1][idx], fc_arr_pre[1][idx]), (fc_arr_tgt[2][idx], fc_arr_pre[2][idx]),phi_3dim[idx],  label="diffs")
-                # #     # ax2.plot(fc_arr_tgt[1], fc_arr_tgt[2], phi_3dim,  'b', label="diffs", linewidth=0.2)
-                # #     # ax2.plot(fc_arr_pre[1], fc_arr_pre[2], phi_3dim,  'r', label="diffs", linewidth=0.2)
-                # #     ax2.plot(fc_arr_tgt[1], fc_arr_tgt[2], 'b', label="diffs", linewidth=0.2)
-                # #     ax2.plot(fc_arr_pre[1], fc_arr_pre[2], 'r', label="diffs", linewidth=0.2)
-                #     ax2.set_xlabel("real")
-                #     ax2.set_ylabel("imag")
-                # #     # ax2.set_zlabel("|phi-pi/2|")
+                fc_arr_tgt = t2d.make_scatter_data(tgt_points, epsilon=0.002, phi_arr=phi_arr)
+                fc_arr_pre = t2d.make_scatter_data(pre_points, epsilon=0.002, phi_arr=phi_arr)
+
+                if PLOT == "fc":
+                    # target
+                    ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
+                    ax2.plot(fc_arr_tgt[0], fc_arr_tgt[2], label="imag_tgt")
+                    ## prediction
+                    ax2.plot(fc_arr_pre[0], fc_arr_pre[1], label="real_pre")
+                    ax2.plot(fc_arr_pre[0], fc_arr_pre[2], label="imag_pre")
+                    ax2.legend(loc=4)
+
+                    # target scatter
+                    # phi_3dim = np.abs(phi_arr - np.pi / 2)
+                    # fc_arr_tgt = t2d.make_scatter_data(tgt_points, phi_arr=phi_arr, epsilon=0.002)
+                    # ## prediction
+                    # fc_arr_pre = t2d.make_scatter_data(pre_points, phi_arr=phi_arr, epsilon=0.002)
+                    # for idx in range(fc_arr_tgt[2].shape[0]):
+                    #     ax2.plot((fc_arr_tgt[1][idx], fc_arr_pre[1][idx]), (fc_arr_tgt[2][idx], fc_arr_pre[2][idx]),phi_3dim[idx],  label="diffs")
+                    # #     # ax2.plot(fc_arr_tgt[1], fc_arr_tgt[2], phi_3dim,  'b', label="diffs", linewidth=0.2)
+                    # #     # ax2.plot(fc_arr_pre[1], fc_arr_pre[2], phi_3dim,  'r', label="diffs", linewidth=0.2)
+                    # #     ax2.plot(fc_arr_tgt[1], fc_arr_tgt[2], 'b', label="diffs", linewidth=0.2)
+                    # #     ax2.plot(fc_arr_pre[1], fc_arr_pre[2], 'r', label="diffs", linewidth=0.2)
+                    #     ax2.set_xlabel("real")
+                    #     ax2.set_ylabel("imag")
+                    # #     # ax2.set_zlabel("|phi-pi/2|")
 
                 ## complexphi
                 # target
-                range_arr = (np.arange(10, dtype=np.float) + 1.0) / 10.0
-                zeros_arr = np.zeros_like(range_arr, dtype=np.float)
-                a = np.concatenate((range_arr, range_arr, zeros_arr), axis=0)
-                b = np.concatenate((zeros_arr, range_arr, range_arr), axis=0)
-                phi_arr = a + 1.0j * b
-                fc_arr_tgt = t2d.make_scatter_data(tgt_points, phi_arr=phi_arr, epsilon=0.002, dphi=0.001,
-                                                   complex_phi=True)
-                fc_arr_pre = t2d.make_scatter_data(pre_points, phi_arr=phi_arr, epsilon=0.002, dphi=0.001,
-                                                   complex_phi=True)
-                # ax2.scatter(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
-                for idx in range(fc_arr_tgt[2].shape[0]):
-                    ax2.plot((fc_arr_tgt[2][idx], fc_arr_pre[2][idx]), (fc_arr_pre[3][idx], fc_arr_tgt[3][idx]),
-                             label="diffs")
+                if PLOT == "stripes":
+                    range_arr = (np.arange(10, dtype=np.float) + 1.0) / 10.0
+                    zeros_arr = np.zeros_like(range_arr, dtype=np.float)
+                    a = np.concatenate((range_arr, range_arr, zeros_arr), axis=0)
+                    b = np.concatenate((zeros_arr, range_arr, range_arr), axis=0)
+                    phi_arr = a + 1.0j * b
+                    fc_arr_tgt = t2d.make_scatter_data(tgt_points, phi_arr=phi_arr, epsilon=0.002, dphi=0.001,
+                                                       complex_phi=True)
+                    fc_arr_pre = t2d.make_scatter_data(pre_points, phi_arr=phi_arr, epsilon=0.002, dphi=0.001,
+                                                       complex_phi=True)
+                    # ax2.scatter(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
+                    for idx in range(fc_arr_tgt[2].shape[0]):
+                        ax2.plot((fc_arr_tgt[2][idx], fc_arr_pre[2][idx]), (fc_arr_pre[3][idx], fc_arr_tgt[3][idx]),
+                                 label="diffs")
 
                 # ax2.legend(loc=4)
 

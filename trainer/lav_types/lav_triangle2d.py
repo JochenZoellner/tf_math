@@ -21,7 +21,7 @@ class LavTriangle2D(LavBase):
     def __init__(self):
         super(LavTriangle2D, self).__init__()
         self._input_fn_generator = InputFn2DT(self._flags)
-        self._model = getattr(model_fn_classes, self._flags.model_type)(self._params)
+        self._model_fn_class = getattr(model_fn_classes, self._flags.model_type)
 
 
 if __name__ == "__main__":

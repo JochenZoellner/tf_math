@@ -41,16 +41,17 @@ class LavBase(object):
             export_dir_path = os.path.join(flags.FLAGS.model_dir, "export")
         else:
             export_dir_path = flags.FLAGS.model_dir
+        if not self._model:
+            self._model = self._model_fn_class(self._params)
         self._model.graph_eval = tf.keras.models.load_model(export_dir_path)
         for (batch, (input_features, targets)) in enumerate(self._input_fn_generator.get_input_fn_val()):
             if self._flags.batch_limiter != -1 and self._flags.batch_limiter <= batch:
                 print(
                     "stop validation after {} batches with {} samples each.".format(batch, self._flags.val_batch_size))
                 break
-            self._model.graph_eval._graph_out = self._model.graph_eval(input_features, training=False)
-            loss = tf.keras.losses.mean_absolute_error(self._model.graph_eval._graph_out["pre_points"],
-                                                       tf.reshape(targets["points"], (-1, 6)))
-            self._model.print_evaluate(self._model.graph_eval._graph_out, targets)
+            graph_out = self._model.graph_eval(input_features, training=False)
+            loss = self._model.loss(graph_out, targets)
+            self._model.print_evaluate(graph_out, targets)
             val_loss += tf.reduce_mean(loss)
         val_loss /= float(batch + 1.0)
         print(
