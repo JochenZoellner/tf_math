@@ -10,6 +10,8 @@ from shapely import geometry
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as t2d
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tf_polygon_2d_helper as tf_p2d
 import model_fn.model_fn_2d.util_2d.graphs_2d as graphs
+import model_fn.util_model_fn.losses as losses
+
 import model_fn.util_model_fn.custom_layers as c_layer
 from model_fn.model_fn_base import ModelBase
 
@@ -27,9 +29,11 @@ class ModelTriangle(ModelBase):
         self._loss = tf.Variable(0.0, dtype=self.mydtype, trainable=False)
         # log different log types to tensorboard:
         self.metrics["train"]["loss_input_diff"] = tf.keras.metrics.Mean("loss_input_diff", self.mydtype)
-        self.metrics["eval"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
-        self.metrics["train"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
         self.metrics["eval"]["loss_input_diff"] = tf.keras.metrics.Mean("loss_input_diff", self.mydtype)
+        self.metrics["train"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
+        self.metrics["eval"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
+        self.metrics["train"]["loss_best_point_diff"] = tf.keras.metrics.Mean("loss_best_point_diff", self.mydtype)
+        self.metrics["eval"]["loss_best_point_diff"] = tf.keras.metrics.Mean("loss_best_point_diff", self.mydtype)
 
     def set_interface(self, val_dataset):
         build_inputs, build_out = super(ModelTriangle, self).set_interface(val_dataset)
@@ -116,16 +120,27 @@ class ModelTriangle(ModelBase):
         ### end plot
         loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in, tgt_in))
         targets_oriented = tf_p2d.make_positiv_orientation(targets["points"], dtype=self.mydtype)
+
         loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)),
                                   self.mydtype)
+        if "best_point_diff" in self._flags.loss_mode or "show_best_point_diff" in self._flags.loss_mode:
+            loss_best_point_diff = tf.cast(losses.batch_point3_loss(targets["points"],
+                                                       predictions["pre_points"],
+                                                       batch_size=self._current_batch_size), self.mydtype)
+        else:
+            loss_best_point_diff = tf.constant(0.0, self.mydtype)
+
         # tf.print("input_diff-loss", loss_input_diff)
         if "input_diff" in self._flags.loss_mode:
             self._loss += loss_input_diff
         if "point_diff" in self._flags.loss_mode:
             self._loss += loss_point_diff
+        if "best_point_diff" in self._flags.loss_mode:
+            self._loss += loss_best_point_diff
 
         self.metrics[self._mode]["loss_input_diff"](loss_input_diff)
         self.metrics[self._mode]["loss_point_diff"](loss_point_diff)
+        self.metrics[self._mode]["loss_best_point_diff"](loss_best_point_diff)
 
         # plt.figure()
         # mask_fc = np.ma.masked_where(fc[0, 0, :] == 0.0, fc[0, 0, :])

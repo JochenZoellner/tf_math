@@ -117,7 +117,7 @@ class TrainerBase(object):
         # self.set_run_config()
         flags.print_flags()
         self._input_fn_generator = None
-        self._model_class = None
+        self._model_fn_class = None
         self._model = None
         self._tape = None
         self._checkpoint_obj_val = None
@@ -144,7 +144,7 @@ class TrainerBase(object):
         print("tf-version: {}".format(tf.__version__))
 
         if not self._model:
-            self._model = self._model_class(self._params)
+            self._model = self._model_fn_class(self._params)
         if not self._model.graph_train:
             self._model.graph_train = self._model.get_graph()
             self._model.set_optimizer()

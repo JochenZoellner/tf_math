@@ -19,6 +19,7 @@ class ModelBase(object):
         self._flags = flags.FLAGS
         self._mode_training = True
         self._mode = "train"
+        self._current_batch_size = self._flags.train_batch_size
         self._net_id = None
 
         self.graph_train = None
@@ -55,8 +56,10 @@ class ModelBase(object):
         self._mode = mode
         if self._mode == "train":
             self._mode_training = True
+            self._current_batch_size = self._flags.train_batch_size
         else:
             self._mode_training = False
+            self._current_batch_size = self._flags.val_batch_size
 
     def set_optimizer(self):
         """set a custom optimizer using --optimizer, --optimizer_params,

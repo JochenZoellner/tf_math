@@ -24,7 +24,7 @@ class Trainer2DTriangle(TrainerBase):
     def __init__(self):
         super(Trainer2DTriangle, self).__init__()
         self._input_fn_generator = InputFn2DT(self._flags)
-        self._model_fn_classes = getattr(models, self._flags.model_type)
+        self._model_fn_class = getattr(models, self._flags.model_type)
         # self._graph.info()
 
 
