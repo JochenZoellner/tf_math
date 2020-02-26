@@ -19,7 +19,10 @@ class ModelBase(object):
         self._flags = flags.FLAGS
         self._mode_training = True
         self._mode = "train"
-        self._current_batch_size = self._flags.train_batch_size
+        if self._flags.hasKey("train_batch_size"):
+            self._current_batch_size = self._flags.train_batch_size
+        else:
+            self.set_mode(mode="eval")  # if no train_batch_size -> eval mode e.g. load-and-validate
         self._net_id = None
 
         self.graph_train = None
