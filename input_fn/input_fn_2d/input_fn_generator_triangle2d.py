@@ -78,11 +78,8 @@ class InputFn2DT(InputFnBase):
         phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(_phi_arr, D_TYPE), axis=0), axis=0)
 
         fc_obj = c_layers.ScatterPolygonTF(phi_tf, dtype=D_TYPE, with_batch_dim=True)
-        point_list = []
-
-        phi_batch = np.broadcast_to(np.expand_dims(_phi_arr, axis=0), (self._flags.train_batch_size,
-                                                                       1,
-                                                                       _phi_arr.shape[0]))
+        phi_batch = np.broadcast_to(np.expand_dims(_phi_arr, axis=0),
+                                    (self._flags.train_batch_size, 1, _phi_arr.shape[0]))
         while True:
             point_list = []
             for i in range(self._flags.train_batch_size):

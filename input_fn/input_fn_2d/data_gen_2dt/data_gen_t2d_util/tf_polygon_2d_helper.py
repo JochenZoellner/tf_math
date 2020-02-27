@@ -194,6 +194,7 @@ def get_orientation_batched(batched_point_squence, dtype=tf.float32):
     return orientation
 
 
+@tf.function
 def make_positiv_orientation(batched_point_squence, dtype=tf.float32):
     orientation = get_orientation_batched(batched_point_squence, dtype=dtype)
     orientation_bool_vec = orientation > tf.constant([0.0], dtype)

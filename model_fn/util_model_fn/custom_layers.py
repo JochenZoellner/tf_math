@@ -23,6 +23,7 @@ class ScatterPolygonTF(tf.keras.layers.Layer):
         self.points_tf = tf.cast(points_tf, dtype=self.mydtype)
         self._cross = tf.constant([[0.0, -1.0], [1.0, 0.0]], dtype=self.mydtype)
 
+    @tf.function
     def __call__(self, points_tf, *args, **kwargs):
         self.update_points(points_tf)
         return self.fc_of_phi()
