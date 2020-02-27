@@ -185,8 +185,6 @@ class TrainerBase(object):
                 loss = self._model.loss(predictions=self._model.graph_train._graph_out, targets=targets_)
                 gradients = self.tape.gradient(loss, self._model.graph_train.trainable_variables)
                 self._model.optimizer.apply_gradients(zip(gradients, self._model.graph_train.trainable_variables))
-                if self._flags.calc_ema:
-                    ema.apply(self._model.graph_train.trainable_variables)
                 self._model.graph_train.global_step.assign(self._model.optimizer.iterations)
                 self._model.graph_train._graph_out["loss"] = tf.reduce_mean(loss)
             return self._model.graph_train._graph_out
@@ -203,6 +201,8 @@ class TrainerBase(object):
 
                 # do the _train_step as tf.function to improve performance
                 train_out_dict = _train_step_intern(input_features, targets)
+                if self._flags.calc_ema:
+                    ema.apply(self._model.graph_train.trainable_variables)
                 self._model.to_tensorboard(train_out_dict, targets, input_features)
                 self.epoch_loss += train_out_dict["loss"]
                 train_batch_number = batch
