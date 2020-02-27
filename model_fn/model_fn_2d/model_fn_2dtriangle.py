@@ -27,6 +27,7 @@ class ModelTriangle(ModelBase):
         self._scatter_calculator = None
         self.scatter_polygon_tf = None
         self._loss = tf.Variable(0.0, dtype=self.mydtype, trainable=False)
+        self._loss_counter = tf.Variable(0, dtype=tf.int64, trainable=False)
         # log different log types to tensorboard:
         self.metrics["train"]["loss_input_diff"] = tf.keras.metrics.Mean("loss_input_diff", self.mydtype)
         self.metrics["eval"]["loss_input_diff"] = tf.keras.metrics.Mean("loss_input_diff", self.mydtype)
@@ -123,24 +124,25 @@ class ModelTriangle(ModelBase):
 
         loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)),
                                   self.mydtype)
-        if "best_point_diff" in self._flags.loss_mode or "show_best_point_diff" in self._flags.loss_mode:
-            loss_best_point_diff = tf.cast(losses.batch_point3_loss(targets["points"],
-                                                       predictions["pre_points"],
-                                                       batch_size=self._current_batch_size), self.mydtype)
-        else:
-            loss_best_point_diff = tf.constant(0.0, self.mydtype)
-
+        if tf.math.mod(self._loss_counter, tf.constant(100, dtype=tf.int64)) == tf.constant(0, dtype=tf.int64):
+            if "best_point_diff" in self._flags.loss_mode or "show_best_point_diff" in self._flags.loss_mode:
+                loss_best_point_diff = tf.cast(losses.batch_point3_loss(targets["points"],
+                                                           predictions["pre_points"],
+                                                           batch_size=self._current_batch_size), self.mydtype)
+            else:
+                loss_best_point_diff = tf.constant(0.0, self.mydtype)
+            self.metrics[self._mode]["loss_best_point_diff"](loss_best_point_diff)
         # tf.print("input_diff-loss", loss_input_diff)
         if "input_diff" in self._flags.loss_mode:
             self._loss += loss_input_diff
         if "point_diff" in self._flags.loss_mode:
             self._loss += loss_point_diff
-        if "best_point_diff" in self._flags.loss_mode:
-            self._loss += loss_best_point_diff
+        # if "best_point_diff" in self._flags.loss_mode:
+        #     self._loss += loss_best_point_diff
 
         self.metrics[self._mode]["loss_input_diff"](loss_input_diff)
         self.metrics[self._mode]["loss_point_diff"](loss_point_diff)
-        self.metrics[self._mode]["loss_best_point_diff"](loss_best_point_diff)
+
 
         # plt.figure()
         # mask_fc = np.ma.masked_where(fc[0, 0, :] == 0.0, fc[0, 0, :])
@@ -175,7 +177,7 @@ class ModelTriangle(ModelBase):
         #                                   self._params["flags"].train_batch_size), dtype=tf.float32)
         # else:
         #     raise KeyError("Loss-mode: {} do not exist!".format(self._flags.loss_mode))
-
+        self._loss_counter += 1
         return self._loss
 
     def export_helper(self):
