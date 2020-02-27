@@ -124,7 +124,7 @@ class ModelTriangle(ModelBase):
 
         loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)),
                                   self.mydtype)
-        if tf.math.mod(self._loss_counter, tf.constant(100, dtype=tf.int64)) == tf.constant(0, dtype=tf.int64):
+        if tf.math.mod(self._loss_counter, tf.constant(50, dtype=tf.int64)) == tf.constant(0, dtype=tf.int64):
             if "best_point_diff" in self._flags.loss_mode or "show_best_point_diff" in self._flags.loss_mode:
                 loss_best_point_diff = tf.cast(losses.batch_point3_loss(targets["points"],
                                                            predictions["pre_points"],
