@@ -15,8 +15,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 flags.define_integer('epochs', 200, 'Epochs to train. If checkpoint already has these epochs, '
                                     'a evaluation and export is done')
 flags.define_integer('samples_per_epoch', 100000, 'Samples shown to the net per epoch.')
-# flags.define_boolean('calc_ema', False, 'Choose whether you want to use EMA (Exponential Moving Average) '
-#                                         'weights or not,')
+flags.define_boolean('calc_ema', False, 'Choose whether you want to use EMA (Exponential Moving Average) '
+                                        'weights or not,')
 # flags.define_float('clip_grad', 0.0, 'gradient clipping value: for positive values GLOBAL norm clipping is performed,'
 #                                      ' for negative values LOCAL norm clipping is performed (default: %(default)s)')
 flags.define_string('optimizer', 'FinalDecayOptimizer', 'the optimizer used to compute and apply gradients.')
@@ -152,6 +152,10 @@ class TrainerBase(object):
             self._model.graph_train.print_params()
             self._model.graph_train.summary()
 
+        if self._flags.calc_ema:
+            ema = tf.train.ExponentialMovingAverage(decay=0.9999)
+
+
         checkpoint_obj = tf.train.Checkpoint(step=self._model.graph_train.global_step, optimizer=self._model.optimizer,
                                              model=self._model.graph_train)
         checkpoint_manager = tf.train.CheckpointManager(checkpoint=checkpoint_obj, directory=self._flags.checkpoint_dir,
@@ -181,6 +185,8 @@ class TrainerBase(object):
                 loss = self._model.loss(predictions=self._model.graph_train._graph_out, targets=targets_)
                 gradients = self.tape.gradient(loss, self._model.graph_train.trainable_variables)
                 self._model.optimizer.apply_gradients(zip(gradients, self._model.graph_train.trainable_variables))
+                if self._flags.calc_ema:
+                    ema.apply(self._model.graph_train.trainable_variables)
                 self._model.graph_train.global_step.assign(self._model.optimizer.iterations)
                 self._model.graph_train._graph_out["loss"] = tf.reduce_mean(loss)
             return self._model.graph_train._graph_out
