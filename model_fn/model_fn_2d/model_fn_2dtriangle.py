@@ -177,7 +177,7 @@ class ModelTriangle(ModelBase):
         #                                   self._params["flags"].train_batch_size), dtype=tf.float32)
         # else:
         #     raise KeyError("Loss-mode: {} do not exist!".format(self._flags.loss_mode))
-        self._loss_counter += 1
+        self._loss_counter.assign_add(1)
         return self._loss
 
     def export_helper(self):
