@@ -58,12 +58,12 @@ class KerasGraphFF3(Graph2D):
 class GraphMultiFF(Graph2D):
     def __init__(self, params):
         super(GraphMultiFF, self).__init__(params)
-        # v0.3
+        # v0.4
         if not self._flags.complex_phi:
             self.fc_size_0 = 3
         else:
             self.fc_size_0 = 4
-        self.graph_params["dense_layers"] = [512, 256, 128, 64, 32]
+        self.graph_params["dense_layers"] = [512,1024,1024,256,128,64,32]
         self.graph_params["input_dropout"] = 0.0
         self.graph_params["ff_dropout"] = 0.0
         self.graph_params["uniform_noise"] = 0.0
