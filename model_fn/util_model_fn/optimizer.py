@@ -50,14 +50,20 @@ class DecayOptimizer(object):
 
     def get_keras_optimizer(self):
         """return tf.keras.optimizer.Optimizer_V2 class-instance"""
+        optimizer_kwargs = {}
+        if "clipvalue" in self._optimizer_params:
+            optimizer_kwargs["clipvalue"] = self._optimizer_params["clipvalue"]
+        if "clipnorm" in self._optimizer_params:
+            optimizer_kwargs["clipnorm"] = self._optimizer_params["clipnorm"]
+
         if not self._keras_optimizer:
             lr = self._get_lr()
             if self._optimizer_params["optimizer"] == 'adam':
-                self._keras_optimizer = tf.keras.optimizers.Adam(lr)
+                self._keras_optimizer = tf.keras.optimizers.Adam(lr, **optimizer_kwargs)
             if self._optimizer_params["optimizer"] == 'rmsprop':
-                self._keras_optimizer = tf.keras.optimizers.RMSprop(lr)
+                self._keras_optimizer = tf.keras.optimizers.RMSprop(lr, **optimizer_kwargs)
             if self._optimizer_params["optimizer"] == 'sgd':
-                self._keras_optimizer = tf.keras.optimizers.SGD(lr)
+                self._keras_optimizer = tf.keras.optimizers.SGD(lr, **optimizer_kwargs)
         if self._optimizer_params["calc_ema"]:
             self._keras_optimizer = tfa.optimizers.MovingAverage(self._keras_optimizer,
                                                                  average_decay=self._optimizer_params["ema_decay"])

@@ -153,7 +153,7 @@ class TrainerBase(object):
             self._model.graph_train.summary()
 
         if self._flags.calc_ema:
-            ema = tf.train.ExponentialMovingAverage(decay=0.9999)
+            ema = tf.train.ExponentialMovingAverage(decay=0.999)
 
 
         checkpoint_obj = tf.train.Checkpoint(step=self._model.graph_train.global_step, optimizer=self._model.optimizer,
