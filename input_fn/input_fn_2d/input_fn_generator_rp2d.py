@@ -7,9 +7,8 @@ from input_fn.input_fn_generator_base import InputFnBase
 class InputFnRegularPolygon2D(InputFnBase):
     """Input Function Generator for regular polygon 2d problems, dataset returns a dict..."""
 
-    def __init__(self, flags):
-        super(InputFnRegularPolygon2D, self).__init__()
-        self._flags = flags
+    def __init__(self, flags_):
+        super(InputFnRegularPolygon2D, self).__init__(flags_)
         self.iterator = None
         self._next_batch = None
         self.dataset = None

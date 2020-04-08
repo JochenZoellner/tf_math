@@ -86,9 +86,10 @@ def parse_regular_polygon2d(example_proto):
 
 
 class Triangle2dSaver(object):
-    def __init__(self, epsilon, phi_arr, x_sorted, samples_per_file, dphi=0.001, complex_phi=False):
+    def __init__(self, epsilon, phi_arr, x_sorted, samples_per_file, dphi=0.001, complex_phi=False, centered=False):
         self.epsilon = epsilon
         self.complex_phi = complex_phi  # True if a and b set via complex value of phi-pyhton-variable
+        self.centered = centered
         self.dphi = dphi
         self.phi_arr = phi_arr
         self.x_sorted = x_sorted
@@ -116,7 +117,7 @@ class Triangle2dSaver(object):
         writer = tf.io.TFRecordWriter(filename)
 
         for i in range(self.samples_per_file):
-            points = t2d.generate_target(x_sorted=self.x_sorted)
+            points = t2d.generate_target(x_sorted=self.x_sorted, center_of_weight=self.centered)
 
             fc_arr = t2d.make_scatter_data(points, epsilon=self.epsilon, phi_arr=self.phi_arr, dphi=self.dphi,
                                            complex_phi=self.complex_phi)
@@ -258,8 +259,7 @@ class RegularPolygon2dSaver(object):
             writer.write(serialized_sample)
         writer.close()
         sys.stdout.flush()
-        if filename.endswith("0000000.tfr"):
-            print("time for one file@1thread: {}".format(time.time() - t1))
+
 
 
 class StarPolygon2dSaver(object):

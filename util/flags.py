@@ -308,29 +308,29 @@ def update_params(class_params, flag_params, name="", print_params=False):
         if i not in class_params:
             logging.critical("Given {0}_params-key '{1}' is not used by {0}-class!".format(name, i))
 
-    list_params = []  # save keys with type list for later
-    for j in class_params:
-        # print(j, type(self.netparams[j]))
-        if isinstance(class_params[j], (list,)):
-            list_params.append(j)
-            # print(list_params)
+    # list_params = []  # save keys with type list for later
+    # for j in class_params:
+    #     # print(j, type(self.netparams[j]))
+    #     if isinstance(class_params[j], (list,)):
+    #         list_params.append(j)
+    #         # print(list_params)
 
     class_params.update(flag_params)
 
-    for j in flag_params:  # check if key with type list should be updated, cast given string to list
-        if j in list_params:
-            logging.info("//// Flags handling: cast {} to list".format(j))
-            assert isinstance(flag_params[j], str)
-            try:
-                # Integer Case
-                class_params[j] = [int(x) for x in flag_params[j][1:-1].split(",")]
-            except:
-                try:
-                    # float Case
-                    class_params[j] = [float(x) for x in flag_params[j][1:-1].split(",")]
-                except:
-                    # If int/float cases fail, make it string...
-                    class_params[j] = [x for x in flag_params[j][1:-1].split(",")]
+    # for j in flag_params:  # check if key with type list should be updated, cast given string to list
+    #     if j in list_params:
+    #         logging.info("//// Flags handling: cast {} to list".format(j))
+    #         assert isinstance(flag_params[j], str)
+    #         try:
+    #             # Integer Case
+    #             class_params[j] = [int(x) for x in flag_params[j][1:-1].split(",")]
+    #         except:
+    #             try:
+    #                 # float Case
+    #                 class_params[j] = [float(x) for x in flag_params[j][1:-1].split(",")]
+    #             except:
+    #                 # If int/float cases fail, make it string...
+    #                 class_params[j] = [x for x in flag_params[j][1:-1].split(",")]
 
     if print_params:
         print("updated {}_params:".format(name))

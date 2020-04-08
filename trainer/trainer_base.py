@@ -21,10 +21,13 @@ flags.define_boolean('calc_ema', False, 'Choose whether you want to use EMA (Exp
 #                                      ' for negative values LOCAL norm clipping is performed (default: %(default)s)')
 flags.define_string('optimizer', 'FinalDecayOptimizer', 'the optimizer used to compute and apply gradients.')
 flags.define_dict('optimizer_params', {}, "key=value pairs defining the configuration of the optimizer.")
-flags.define_dict('input_fn_params', {}, "key=value pairs defining the configuration of the optimizer.")
+flags.define_dict('input_params', {}, "key=value pairs defining the configuration of the input function."
+                  "input Pipeline parametrization, see input_fn.input_fn_<your-project> for usage.")
+flags.define_dict('model_params', {}, "key=value pairs defining the configuration of the model function."
+                  "model specific parametrization, see model_fn.model_fn_<your-project> for usage.")
+flags.define_dict('graph_params', {}, "key=value pairs defining the configuration of the input function."
+                  "graph specific parametrization, see model_fn.model_fn_<your-project>. ... graphs for usage.")
 
-# flags.define_string('learn_rate_schedule', "decay", 'decay, finaldecay, warmupfinaldecay')
-# flags.define_dict("learn_rate_params", {}, "key=value pairs defining the configuration of the learn_rate_schedule.")
 # flags.define_string('train_scopes', '', 'Change only variables in this scope during training')
 flags.define_integer('eval_every_n', 1, "Evaluate/Validate every 'n' epochs")  # Todo: to be implemented
 flags.define_string('checkpoint_dir', '', 'Checkpoint to save model information in.')
@@ -32,8 +35,6 @@ flags.define_string('checkpoint_dir', '', 'Checkpoint to save model information 
 #                                          'then this one is used).')
 flags.define_boolean('reset_global_step', False, 'resets global_step, this restarts the learning_rate decay,'
                                                  'only works with load from warmstart_dir')  # Todo: to be implemented
-flags.define_boolean('rebuilt', False, 'rebuilt model after 2 epochs, to freeze batchnorm')  # Todo: to be implemented
-
 flags.define_list('train_lists', str, 'space seperated list of training sample lists',
                   "names of the training sample lists to use. You can provide a single list as well. ",
                   ["lists/stazh_train.lst"])
@@ -47,6 +48,8 @@ flags.define_integer('train_batch_size', 100, 'number of elements in a training 
 #                      'this many times, until an optimization step is performed. This allows HIGH'
 #                      'batchSizes even with limited memory and huge models.')
 flags.define_string('val_list', None, '.lst-file specifying the dataset used for validation')
+flags.define_list('val_lists', str, 'space separated list of val-list-paths',
+                  'names of val-lists, if set ''--val_list is ignored!', default_value=None)
 flags.define_integer('val_batch_size', 100, 'number of elements in a val_batch between training '
                                             'epochs(default: %(default)s). '
                                             'has no effect if status is not "train"')
@@ -89,12 +92,6 @@ def set_run_config():
         if flags.FLAGS.gpu_memory_limit > 0:
             tf.config.experimental.set_virtual_device_configuration(gpu, [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=flags.FLAGS.gpu_memory_limit)])
 
-    #
-    # if not flags.FLAGS.gpu_devices:
-    #     tf.config.experimental.set_visible_devices([], 'GPU')
-    # elif flags.FLAGS.gpu_devices and gpus:
-    #     tf.config.experimental.set_visible_devices(gpus, 'GPU')
-
     if flags.FLAGS.force_eager:
         tf.config.experimental_run_functions_eagerly(run_eagerly=True)
 
@@ -114,7 +111,6 @@ class TrainerBase(object):
         else:
             self.tee = None
 
-        # self.set_run_config()
         flags.print_flags()
         self._input_fn_generator = None
         self._model_fn_class = None
@@ -124,7 +120,6 @@ class TrainerBase(object):
         self._optimizer_fn = None
         self._optimizer = None
         self._train_dataset = None
-        self._run_config = None
         self._params = None
         self._current_epoch = 0
         self.epoch_loss = 0.0
@@ -155,7 +150,6 @@ class TrainerBase(object):
         if self._flags.calc_ema:
             ema = tf.train.ExponentialMovingAverage(decay=0.999)
 
-
         checkpoint_obj = tf.train.Checkpoint(step=self._model.graph_train.global_step, optimizer=self._model.optimizer,
                                              model=self._model.graph_train)
         checkpoint_manager = tf.train.CheckpointManager(checkpoint=checkpoint_obj, directory=self._flags.checkpoint_dir,
@@ -176,9 +170,7 @@ class TrainerBase(object):
         if not self._train_dataset:
             self._train_dataset = self._input_fn_generator.get_input_fn_train()
 
-        train_step_signature = self._model.get_call_graph_signature()
-
-        @tf.function(input_signature=train_step_signature)
+        @tf.function(input_signature=self._model.graph_signature)
         def _train_step_intern(input_features_, targets_):
             with tf.GradientTape() as self.tape:
                 self._model.graph_train._graph_out = self._model.graph_train(input_features_, training=True)
@@ -223,34 +215,7 @@ class TrainerBase(object):
             # Evaluation on this checkpoint
             self._model.set_mode("eval")
             self.eval()
-            self._model.write_tensorboard()
-            if self._flags.rebuilt and self._model.graph_train.global_epoch.numpy() == 2:
-                print("Rebuild graph")
-                self._model.graph_train = self._model.get_graph()
-                self._model.set_optimizer()
-                self._model.set_interface(self._input_fn_generator.get_input_fn_val())
-                checkpoint_obj = tf.train.Checkpoint(step=self._model.graph_train.global_step,
-                                                     optimizer=self._model.optimizer,
-                                                     model=self._model.graph_train)
-                checkpoint_manager = tf.train.CheckpointManager(checkpoint=checkpoint_obj,
-                                                                directory=self._flags.checkpoint_dir,
-                                                                max_to_keep=1)
-                checkpoint_obj.restore(tf.train.latest_checkpoint(self._flags.checkpoint_dir))
 
-                @tf.function(input_signature=train_step_signature)
-                def _train_step_intern(input_features_, targets_):
-                    with tf.GradientTape() as self.tape:
-                        self._model.graph_train._graph_out = self._model.graph_train(input_features_, training=True)
-                        loss = self._model.loss(predictions=self._model.graph_train._graph_out, targets=targets_)
-                        gradients = self.tape.gradient(loss, self._model.graph_train.trainable_variables)
-                        self._model.optimizer.apply_gradients(
-                            zip(gradients, self._model.graph_train.trainable_variables))
-                        self._model.graph_train.global_step.assign(self._model.optimizer.iterations)
-                        self._model.graph_train._graph_out["loss"] = tf.reduce_mean(loss)
-                    return self._model.graph_train._graph_out
-
-                self._model.graph_eval = None
-                self._checkpoint_obj_val = None
 
         self.export()
 
@@ -265,9 +230,8 @@ class TrainerBase(object):
         self._checkpoint_obj_val.restore(tf.train.latest_checkpoint(self._flags.checkpoint_dir))
         val_loss = 0.0
         t_val = time.time()
-        call_graph_signature = self._model.get_call_graph_signature()
 
-        @tf.function(input_signature=call_graph_signature)
+        @tf.function(input_signature=self._model.graph_signature)
         def call_graph(input_features_, targets_):
             self._model.graph_eval._graph_out = self._model.graph_eval(input_features_, training=False)
             loss_ = self._model.loss(predictions=self._model.graph_eval._graph_out, targets=targets_)
@@ -275,15 +239,30 @@ class TrainerBase(object):
             return self._model.graph_eval._graph_out
 
         val_batch_number = 0
-        for (batch, (input_features, targets)) in enumerate(self._input_fn_generator.get_input_fn_val()):
-            eval_out_dict = call_graph(input_features, targets)
-            self._model.to_tensorboard(eval_out_dict, targets, input_features)
-            val_loss += eval_out_dict["loss"]
-            val_batch_number = batch
-        val_loss /= float(val_batch_number + 1.0)
-        print("val-loss:{:10.3f}, samples/second:{:8.1f}, time:{:6.1f}"
-              .format(val_loss, (val_batch_number + 1) * self._flags.val_batch_size /
-                      (time.time() - t_val), time.time() - t_val))
+
+        if self._flags.val_lists:
+            val_lists = self._flags.val_lists
+        else:
+            val_lists = [self._flags.val_list]
+        print('\nEvaluation results after epoch {}:'.format(self._model.graph_eval.global_epoch.numpy()))
+        for idx, val_list in enumerate(val_lists):
+            if self._flags.val_lists:
+                self._input_fn_generator.set_val_list(idx)
+                eval_name = os.path.basename(val_list)[:-4]
+            else:
+                eval_name = None
+            for (batch, (input_features, targets)) in enumerate(self._input_fn_generator.get_input_fn_val()):
+                eval_out_dict = call_graph(input_features, targets)
+                self._model.to_tensorboard(eval_out_dict, targets, input_features)
+                val_loss += eval_out_dict["loss"]
+                val_batch_number = batch
+            val_loss /= float(val_batch_number + 1.0)
+            if self._flags.val_lists:
+                print("Results for list: {}".format(val_list))
+            print("val-loss:{:10.3f}, samples/second:{:8.1f}, time:{:6.1f}"
+                  .format(val_loss, (val_batch_number + 1) * self._flags.val_batch_size /
+                          (time.time() - t_val), time.time() - t_val))
+            self._model.write_tensorboard(summary_writer_name=os.path.basename(val_list[:-4]))
 
     def export(self):
         # Export as saved model

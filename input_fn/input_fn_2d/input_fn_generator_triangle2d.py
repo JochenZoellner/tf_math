@@ -1,43 +1,42 @@
 import logging
 import time
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
 if __name__ == "__main__":
     import util.flags as flags
-    import trainer.trainer_base  # do not remove, needed for flag imports
-    import trainer.trainer_types.trainer_2dt.trainer_triangle2d  # do not remove, needed for flag imports
 
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tfr_helper as tfr_helper
 from input_fn.input_fn_generator_base import InputFnBase
+from util.flags import update_params
 import model_fn.util_model_fn.custom_layers as c_layers
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tf_polygon_2d_helper as tf_p2d
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as t2d
 
 logger = logging.getLogger(__name__)
-logger.setLevel("DEBUG")
+
+
+# logger.setLevel("DEBUG")
 
 
 class InputFn2DT(InputFnBase):
     """Input Function Generator for 2d triangle problems,  dataset returns a dict..."""
 
-    def __init__(self, flags):
-        super(InputFn2DT, self).__init__()
-        self._flags = flags
+    def __init__(self, flags_):
+        super(InputFn2DT, self).__init__(flags_)
         self.iterator = None
         self._next_batch = None
         self.dataset = None
-        self._input_params = None
         self._dphi = 0.01
-        if self._flags.hasKey("input_fn_params"):
-            logger.info("Set input_fn_params")
-            self._input_params = self._flags.input_fn_params
-            if "min_fov" in self._input_params:
-                self._min_fov = self._input_params["min_fov"]
-            if "max_fov" in self._input_params:
-                self._max_fov = self._input_params["max_fov"]
 
+        logger.info("Set input_fn_params")
+        self._input_params["min_fov"] = 0.0
+        self._input_params["max_fov"] = 180.0
+        self._input_params["centered"] = False
+
+        # Updating of the default params if provided via flags as a dict
+        self._input_params = update_params(self._input_params, self._flags.input_params, "input")
 
     def cut_phi_batch(self, batch, min_fov=None, max_fov=None):
         """
@@ -49,10 +48,10 @@ class InputFn2DT(InputFnBase):
         :return:
         """
         if not min_fov:
-            min_fov = self._min_fov
+            min_fov = self._input_params["min_fov"]
 
         if not max_fov:
-            max_fov = self._max_fov
+            max_fov = self._input_params["max_fov"]
 
         phi_vec = batch["fc"][0, 0, :]
         max_fov = max_fov / 180.0 * np.pi  # max_angle_of_view_cut_rad
@@ -64,7 +63,6 @@ class InputFn2DT(InputFnBase):
         both_blocks = tf.logical_or(lower_block, upper_block)
         batch["fc"] = tf.where(both_blocks, batch["fc"], tf.zeros_like(batch["fc"]))
         # batch["fc"] = tf.concat((batch["fc"][:, :1], mask_batch[:, 1:]), axis=1)
-
 
         return batch
 
@@ -83,7 +81,7 @@ class InputFn2DT(InputFnBase):
         while True:
             point_list = []
             for i in range(self._flags.train_batch_size):
-                points = t2d.generate_target(x_sorted=True)
+                points = t2d.generate_target(x_sorted=True, center_of_weight=self._input_params["centered"])
                 point_list.append(points)
 
             batch_points = np.stack(point_list)
@@ -97,10 +95,12 @@ class InputFn2DT(InputFnBase):
         # One instance of train dataset to produce infinite many samples
         if "infinity" in self._flags.train_lists[0]:
             parsed_dataset_batched = tf.data.Dataset.from_generator(self.batch_generator,
-                                                                    output_types=({"fc": tf.float32}, {"points": tf.float32}),
+                                                                    output_types=(
+                                                                    {"fc": tf.float32}, {"points": tf.float32}),
                                                                     output_shapes=
                                                                     ({"fc": (self._flags.train_batch_size, 3, None)},
-                                                                     {"points": (self._flags.train_batch_size, 3, None)}))
+                                                                     {"points": (
+                                                                     self._flags.train_batch_size, 3, None)}))
             # parsed_dataset_batched = parsed_dataset_batched.map(lambda y, x: (y, x), num_parallel_calls=8)
 
             parsed_dataset_batched = parsed_dataset_batched.map(self.tf_cut_phi_batch, num_parallel_calls=4)
@@ -118,7 +118,6 @@ class InputFn2DT(InputFnBase):
             else:
                 parsed_dataset = raw_dataset.map(tfr_helper.parse_t2d_phi_complex, num_parallel_calls=10)
 
-
             # parsed_dataset = parsed_dataset.shuffle(buffer_size=1000)
             parsed_dataset_batched = parsed_dataset.batch(self._flags.train_batch_size)
             if self._input_params:
@@ -130,7 +129,7 @@ class InputFn2DT(InputFnBase):
 
     def get_input_fn_val(self):
 
-        with open(self._flags.val_list, "r") as tr_fobj:
+        with open(self._val_list, "r") as tr_fobj:
             train_filepath_list = [x.strip("\n") for x in tr_fobj.readlines()]
 
         raw_dataset = tf.data.TFRecordDataset(train_filepath_list)
@@ -154,6 +153,7 @@ class InputFn2DT(InputFnBase):
         self.dataset = parsed_dataset.batch(batch_size)
         return self.dataset.prefetch(100)
 
+
 def test_generator():
     input_fn = InputFn2DT(flags.FLAGS)
     dataset_train = input_fn.get_input_fn_train()
@@ -169,9 +169,8 @@ def test_generator():
     samples = flags.FLAGS.train_batch_size * max_batches
     print("Time: {}, Samples: {}, S/S: {:0.0f}".format(t, samples, float(samples) / t))
 
+
 if __name__ == "__main__":
-
-
     test_generator()
 
     print("run input_fn_generator_2dtriangle debugging...")
@@ -197,5 +196,3 @@ if __name__ == "__main__":
     #     # print(tgt["points"])
     #
     # print("Done.")
-
-

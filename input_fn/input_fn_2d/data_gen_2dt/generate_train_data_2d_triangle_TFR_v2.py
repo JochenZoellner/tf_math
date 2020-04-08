@@ -23,6 +23,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or any {'0', '1', '2'} set tensorflo
 flags.define_string("data_id", "magic_synthetic_dataset", "select a name unique name for the dataset")
 flags.define_string('print_to', 'console', 'write prints to "console, "file", "both"')
 flags.define_boolean("complex_phi", False, "use values for a and b not depending from phi")
+flags.define_boolean("centered", False, "use values for a and b not depending from phi")
 flags.define_string("mode", "val", "select 'val' or 'train'")
 flags.define_list('files_train_val', int, "[int(train_files), int(val_files)]",
                   'files to generate for train data/val data', default_value=[1000, 10])
@@ -83,7 +84,8 @@ if __name__ == "__main__":
     D_TYPE = tf.float32
 
     t2d_saver_obj = tfr_helper.Triangle2dSaver(epsilon=0.001, phi_arr=tf.constant(phi_arr, D_TYPE), x_sorted=True,
-                                               samples_per_file=samples_per_file, complex_phi=complex_phi)
+                                               samples_per_file=samples_per_file, complex_phi=complex_phi,
+                                               centered=flags.FLAGS.centered)
 
     # save_TFR_x = partial(tfr_helper.save_tfr_t2d, samples=flags.FLAGS.samples_per_file)
     # pool = multiprocessing.Pool(8)

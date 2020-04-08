@@ -153,25 +153,39 @@ class ModelBase(object):
         """
         pass
 
-    def write_tensorboard(self):
-        """Write metrics to tensorboard-file (it's called after each epoch) and reset tf.keras.metrics"""
-        with self.summary_writer[self._mode].as_default():
-            if self._mode_training:
-                tf.summary.scalar("learning_rate",
-                                  self.custom_optimizer.get_current_learning_rate(self.optimizer.iterations - 1),
-                                  step=self.optimizer.iterations - 1)
-                tf.summary.scalar("learning_rate", self.custom_optimizer.get_current_learning_rate(self.optimizer.iterations),
-                                  step=self.optimizer.iterations)
+    def write_tensorboard(self, summary_writer_name=None):
+        """Write metrics to tensorboard-file (it's called after each epoch) and reset tf.keras.metrics
+        :argument summary_writer_name: name of graph in tensorboard
+        :type summary_writer_name str"""
+        if self.summary_writer[self._mode]:
+            if summary_writer_name:
+                if summary_writer_name not in self.summary_writer:
+                    self.summary_writer[summary_writer_name] = tf.summary.create_file_writer(
+                        os.path.join(self._flags.checkpoint_dir, "logs", summary_writer_name))
+                summary_writer_obj = self.summary_writer[summary_writer_name]
             else:
-                # add
-                pass
+                summary_writer_obj = self.summary_writer[self._mode]
 
-            logger.info("Reset all metics {}".format(self._mode))
-            for metric in self.metrics[self._mode]:
-                logger.debug("Write metric: {} with tf.name: {}".format(metric, self.metrics[self._mode][metric].name))
-                tf.summary.scalar(metric, self.metrics[self._mode][metric].result(), step=self.graph_train.global_epoch)
-                logger.debug("Reset metric: {} with tf.name: {}".format(metric, self.metrics[self._mode][metric].name))
-                self.metrics[self._mode][metric].reset_states()
+            with summary_writer_obj.as_default():
+                if self._mode_training:
+                    tf.summary.scalar("learning_rate",
+                                      self.custom_optimizer.get_current_learning_rate(self.optimizer.iterations - 1),
+                                      step=self.optimizer.iterations - 1)
+                    tf.summary.scalar("learning_rate", self.custom_optimizer.get_current_learning_rate(self.optimizer.iterations),
+                                      step=self.optimizer.iterations)
+                else:
+                    # add
+                    pass
+
+                logger.info("Reset all metics {}".format(self._mode))
+                for metric in self.metrics[self._mode]:
+                    logger.debug("Write metric: {} with tf.name: {}".format(metric, self.metrics[self._mode][metric].name))
+                    tf.summary.scalar(metric, self.metrics[self._mode][metric].result(), step=self.graph_train.global_epoch)
+                    logger.debug("Reset metric: {} with tf.name: {}".format(metric, self.metrics[self._mode][metric].name))
+                    self.metrics[self._mode][metric].reset_states()
+        else:
+            assert not self._flags.tensorboard
+            logging.info("Passing 'write_tensorboard'because --tensorboard=False")
 
     def to_tensorboard(self, graph_out_dict, targets, input_features):
         """update tf.keras.metrics with this function (it's called after each batch"""
@@ -193,5 +207,6 @@ class ModelBase(object):
         """is called at end of lav(load_and_validate), can use graph variables or plot something"""
         pass
 
-    def get_call_graph_signature(self):
+    @property
+    def graph_signature(self):
         return None

@@ -415,3 +415,9 @@ class ModelTriangle(ModelBase):
                     os.remove(pdf)
                 else:
                     logging.warning("Can not delete temporary file, result is probably incomplete!")
+
+    @property
+    def graph_signature(self):
+        return [{'fc': tf.TensorSpec(shape=[self._current_batch_size, 3, self._flags.data_len], dtype=tf.float32)},
+                {'points': tf.TensorSpec(shape=[self._current_batch_size, 3, 2], dtype=tf.float32)}]
+
