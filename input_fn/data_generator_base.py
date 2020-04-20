@@ -18,7 +18,7 @@ flags.define_string("data_id", "", "select a name unique name for the dataset")
 flags.define_string("output_dir", "data/synthetic_data", "select a name unique name for the dataset")
 flags.define_string('print_to', 'console', 'write prints to "console, "file", "both"')
 flags.define_boolean("centered", False, "use values for a and b not depending from phi")
-flags.define_string("mode", "val", "select 'val' or 'train' or 'debug'")
+flags.define_string("mode", "debug", "select 'val' or 'train' or 'debug'")
 flags.define_list('files_train_val', int, "[int(train_files), int(val_files)]",
                   'files to generate for train data/val data', default_value=[1000, 10])
 flags.define_integer("samples_per_file", 1000, "set number of samples saved in each file")
