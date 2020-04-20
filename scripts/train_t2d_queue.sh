@@ -4,7 +4,7 @@ ID=$1
 shift
 EPOCH=100
 set -xe
-DATASET="t2d_312symetric_unbatchA"
+DATASET="t2d_312symetric_unbatchedA"
 DATALEN=312
 PARAMS="
   --train_lists infinity
