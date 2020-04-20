@@ -4,8 +4,8 @@ ID=$1
 shift
 EPOCH=100
 set -xe
-DATASET="t2d_tf_314_1M_po"
-DATALEN=314
+DATASET="t2d_312symetric_unbatchedA"
+DATALEN=312
 PARAMS="
   --train_lists infinity
   --val_list lists/${DATASET}_val.lst
