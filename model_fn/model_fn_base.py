@@ -183,6 +183,7 @@ class ModelBase(object):
                     tf.summary.scalar(metric, self.metrics[self._mode][metric].result(), step=self.graph_train.global_epoch)
                     logger.debug("Reset metric: {} with tf.name: {}".format(metric, self.metrics[self._mode][metric].name))
                     self.metrics[self._mode][metric].reset_states()
+            summary_writer_obj.flush()
         else:
             assert not self._flags.tensorboard
             logging.info("Passing 'write_tensorboard'because --tensorboard=False")

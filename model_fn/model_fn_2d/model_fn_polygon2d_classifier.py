@@ -22,14 +22,6 @@ class ModelPolygonClassifier(ModelBase):
     def get_graph(self):
         return getattr(graphs, self._params['flags'].graph)(self._params)
 
-    def get_placeholder(self):
-        return {"fc": tf.compat.v1.placeholder(tf.float32, [None, 3, None], name="infc")}
-
-    def get_output_nodes(self, has_graph=True):
-        if has_graph:
-            tf.identity(self._graph_out['edges'], name="edges")  # name to grab from java
-        return "e_pred"  # return names as comma separated string without spaces
-
     def get_target_keys(self):
         return 'edges'
 

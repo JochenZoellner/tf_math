@@ -1,6 +1,11 @@
 import logging
+import time
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
+# logger.setLevel(logging.DEBUG)
+
 
 
 class Fcalculator:
@@ -266,3 +271,28 @@ def case_f(phi, p1=np.array([0.0, 0.0]), p2=np.array([1.0, 0.0]), p3=np.array([0
         return np.nan
 
     return f_
+
+
+def get_min_aspect_ratio(points):
+    assert type(points) == np.ndarray
+    assert points.shape == (3, 2)
+    distances = points - np.roll(points, axis=0, shift=1)
+    abs_distances = np.sqrt(np.sum(np.square(distances), axis=1))
+    s = 0.5 * np.sum(abs_distances)
+    area = np.sqrt(s * np.prod(s-abs_distances))
+    h_c = 2 / np.max(abs_distances) * area
+    logger.debug("get_min_aspect_ratio:")
+    logger.debug("points {}".format(points))
+    logger.debug("distances: {}".format(abs_distances))
+    logger.debug("A: {}".format(area))
+    logger.debug("H_min: {}".format(h_c))
+    logger.info("min_aspect_ratio: {}".format(h_c))
+    return h_c / np.max(abs_distances)
+
+
+if __name__ == "__main__":
+    logging.basicConfig()
+    points = np.array([[0.0, 0.0],[4.0, 0.0],[0.0, 0.1]])
+    print(get_min_aspect_ratio(points))
+
+

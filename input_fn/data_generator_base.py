@@ -11,19 +11,24 @@ import tensorflow as tf
 
 import util.flags as flags
 from util.misc import get_commit_id, Tee
+import input_fn.input_fn_2d.input_fn_2d_util as phi_fn
 
 # ========
-flags.define_string("data_id", "magic_synthetic_dataset", "select a name unique name for the dataset")
+flags.define_string("data_id", "", "select a name unique name for the dataset")
 flags.define_string("output_dir", "data/synthetic_data", "select a name unique name for the dataset")
 flags.define_string('print_to', 'console', 'write prints to "console, "file", "both"')
 flags.define_boolean("centered", False, "use values for a and b not depending from phi")
-flags.define_string("mode", "val", "select 'val' or 'train'")
+flags.define_string("mode", "val", "select 'val' or 'train' or 'debug'")
 flags.define_list('files_train_val', int, "[int(train_files), int(val_files)]",
                   'files to generate for train data/val data', default_value=[1000, 10])
 flags.define_integer("samples_per_file", 1000, "set number of samples saved in each file")
 flags.define_integer("jobs", -1, "set number of samples saved in each file")
 flags.define_float("delta_phi", 0.01, "set distance (in degree) between measurement points")
 flags.define_float("epsilon", 0.001, "set epsilon for nummerical critical points")
+flags.define_boolean("debug", False, "start debug plotting after data generation")
+flags.define_dict('target_shape_params', {}, "key=value pairs defining the configuration of the input function."
+                  "configure the target shape generation")
+
 
 D_TYPE = tf.float32
 
@@ -32,6 +37,7 @@ class DataGeneratorBase(object):
     def __init__(self):
         self._flags = flags.FLAGS
         assert os.path.isdir(self._flags.output_dir)
+        assert self._flags.data_id is not "", "--data_id is required and please check the working dir?"
         self._main_data_out = os.path.join(self._flags.output_dir, self._flags.data_id)
         tee_path = os.path.join(self._main_data_out, "log_{}_{}.txt".format(flags.FLAGS.data_id, flags.FLAGS.mode))
         if not os.path.isdir(os.path.dirname(tee_path)):
@@ -51,20 +57,24 @@ class DataGeneratorBase(object):
 
         self._shape_description = None
         self._shape_description_short = None
-        self._phi_arr = np.arange(self._flags.delta_phi, np.pi, self._flags.delta_phi)
+        self._phi_arr = phi_fn.phi_array_open_symetric_no90(self._flags.delta_phi)
         self._dtype = D_TYPE
         self.saver_obj = None
         self.parse_fn = None
         if flags.FLAGS.mode == "val":
             self._number_of_files = flags.FLAGS.files_train_val[1]
-        else:
+        elif flags.FLAGS.mode == "train":
             self._number_of_files = flags.FLAGS.files_train_val[0]
-
+        elif flags.FLAGS.mode == "debug":
+            self._number_of_files = 1
+        else:
+            raise ValueError("Unexpected mode: {}".format(flags.FLAGS.mode))
         self._data_folder = os.path.join(self._main_data_out, flags.FLAGS.mode)
         if not os.path.isdir(self._data_folder):
             os.makedirs(self._data_folder)
         self._filename_list = list(
             [os.path.join(self._data_folder, "data_{:07d}.tfr".format(x)) for x in range(self._number_of_files)])
+        self._debug_batch = None
 
     def run(self):
         self.init_run()
@@ -104,21 +114,33 @@ class DataGeneratorBase(object):
         print("Load & batch-test...")
         timer1 = time.time()
         raw_dataset = tf.data.TFRecordDataset(self._filename_list)
-        print(raw_dataset)
+        print("Raw dataset:\n  ", raw_dataset)
 
         parsed_dataset = raw_dataset.map(self.parse_fn)
-        parsed_dataset_batched = parsed_dataset.batch(1000)
+        print("Parsed dataset:\n  ", parsed_dataset)
 
-        print(parsed_dataset)
+        parsed_dataset_unbatched = parsed_dataset.unbatch()
+        print("unBatched dataset:\n  ", parsed_dataset_unbatched)
+        parsed_dataset_batched = parsed_dataset_unbatched.batch(self._flags.samples_per_file)
+        print("Batched dataset:\n  ", parsed_dataset_batched)
+
         counter = 0
         for sample in parsed_dataset_batched:
             # tf.decode_raw(sample["fc"], out_type=tf.float32)
-            a = sample[0]
-            if counter == 1:
-                print(a[[*a][0]].shape)
-            counter += 1
+            inputs = sample[0]
+            targets = sample[1]
+            if counter == 0:
+                print("Inputs:")
+                for key in [*inputs]:
+                    print("Shape of '{}': {}".format(key, inputs[key].shape))
+                print("Target:")
+                for key in [*targets]:
+                    print("Shape of '{}': {}".format(key, targets[key].shape))
 
+            counter += 1
         print("  Time for load test: {:0.1f}".format(time.time() - timer1))
+        if self._flags.mode == 'debug':
+            self._debug_batch = sample
         print("  Done.")
 
     def get_saver_obj(self):

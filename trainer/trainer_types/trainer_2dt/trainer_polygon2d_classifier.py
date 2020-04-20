@@ -13,7 +13,7 @@ import model_fn.model_fn_2d.model_fn_polygon2d_classifier as models
 # Model parameter
 # ===============
 flags.define_string('model_type', 'ModelPolygonClassifier', 'Model Type to use choose from: ModelTriangle')
-flags.define_string('loss_mode', "abs_diff", "'abs_diff', 'softmax_crossentropy")
+flags.define_string('loss_mode', "softmax_crossentropy", "'abs_diff', 'softmax_crossentropy")
 flags.define_string('graph', 'GraphConv2MultiFF', 'class name of graph architecture')
 
 flags.define_dict('graph_params', {"edge_classifier": True},

@@ -240,9 +240,12 @@ class ModelTriangle(ModelBase):
         tgt_area_arr = np.zeros(summary_lenght)
         pre_area_arr = np.zeros(summary_lenght)
         pre_area_arr = np.zeros(summary_lenght)
+        min_aspect_ratio_arr = np.zeros(summary_lenght)
         iou_arr = np.zeros(summary_lenght)
         co_loss_arr = np.ones(summary_lenght) * np.nan
         wo_loss_arr = np.ones(summary_lenght) * np.nan
+        doa_real_arr = np.zeros(summary_lenght)
+        doa_imag_arr = np.zeros(summary_lenght)
 
         for i in range(summary_lenght):
             pre_points = np.reshape(self._summary_object["pre_points"][i], (3, 2))
@@ -258,11 +261,26 @@ class ModelTriangle(ModelBase):
             iou_arr[i] = intersetion_area / union_area
             tgt_area_arr[i] = tgt_polygon.area
             pre_area_arr[i] = pre_polygon.area
+            min_aspect_ratio_arr[i] = t2d.get_min_aspect_ratio(tgt_points)
+
             # co_loss_arr[i] = self._summary_object["ordered_best"][i]
             # wo_loss_arr[i] = self._summary_object["unordered_best"][i]
             # PLOT = "stripes"
+            dphi = 0.01
+            har = 00.0 / 180.0 * np.pi  # hole_half_angle_rad
+            mac = 00.0 / 180.0 * np.pi  # max_angle_of_view_cut_rad
+            phi_arr = np.concatenate((np.arange(0 + har, np.pi / 2 - mac, dphi),
+                                      np.arange(np.pi / 2 + har, np.pi - mac, dphi)))
+
+            fc_arr_tgt = t2d.make_scatter_data(tgt_points, epsilon=0.002, phi_arr=phi_arr)
+            fc_arr_pre = t2d.make_scatter_data(pre_points, epsilon=0.002, phi_arr=phi_arr)
+            doa_real_arr[i] = np.sum(np.abs(fc_arr_tgt[1] - fc_arr_pre[1])) / np.sum(
+                        np.abs(fc_arr_tgt[1]) + np.abs(fc_arr_pre[1]))
+            doa_imag_arr[i] =  np.sum(np.abs(fc_arr_tgt[2] - fc_arr_pre[2])) / np.sum(
+                        np.abs(fc_arr_tgt[2]) + np.abs(fc_arr_pre[2]))
+            select = min_aspect_ratio_arr[i] > 0.2 and iou_arr[i] < 0.6 and doa_imag_arr[i] < 0.1 and doa_real_arr[i] < 0.1
             PLOT = "fc"
-            if PLOT:
+            if PLOT and select:
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 14))
 
                 ax1.fill(tgt_points.transpose()[0], tgt_points.transpose()[1], "b", pre_points.transpose()[0],
@@ -272,14 +290,6 @@ class ModelTriangle(ModelBase):
                 ax1.set_ylim(-50, 50)
 
                 ax2.set_title("F(phi)")
-                dphi = 0.01
-                har = 00.0 / 180.0 * np.pi  # hole_half_angle_rad
-                mac = 00.0 / 180.0 * np.pi  # max_angle_of_view_cut_rad
-                phi_arr = np.concatenate((np.arange(0 + har, np.pi / 2 - mac, dphi),
-                                          np.arange(np.pi / 2 + har, np.pi - mac, dphi)))
-
-                fc_arr_tgt = t2d.make_scatter_data(tgt_points, epsilon=0.002, phi_arr=phi_arr)
-                fc_arr_pre = t2d.make_scatter_data(pre_points, epsilon=0.002, phi_arr=phi_arr)
 
                 if PLOT == "fc":
                     # target
@@ -375,15 +385,15 @@ class ModelTriangle(ModelBase):
 
                 ax1.set_title("(red) pre_points: p1={:2.2f},{:2.2f};p2={:2.2f},{:2.2f};p3={:2.2f},{:2.2f}\n"
                               "(blue)tgt_points: p1={:2.2f},{:2.2f};p2={:2.2f},{:2.2f};p3={:2.2f},{:2.2f}\n"
-                              "iou: {:1.2f}; doa (real) {:1.2f}; doa (imag) {:1.2f}".format(
-                    pre_points[0][0], pre_points[0][1], pre_points[1][0], pre_points[1][1], pre_points[2][0],
-                    pre_points[2][1],
-                    tgt_points[0][0], tgt_points[0][1], tgt_points[1][0], tgt_points[1][1], tgt_points[2][0],
-                    tgt_points[2][1],
-                    intersetion_area / union_area, np.sum(np.abs(fc_arr_tgt[1] - fc_arr_pre[1])) / np.sum(
-                        np.abs(fc_arr_tgt[1]) + np.abs(fc_arr_pre[1])),
-                    np.sum(np.abs(fc_arr_tgt[2] - fc_arr_pre[2])) / np.sum(
-                        np.abs(fc_arr_tgt[2]) + np.abs(fc_arr_pre[2]))
+                              "iou: {:1.2f}; doa (real) {:1.2f}; doa (imag) {:1.2f}; maspectratio {:0.2f}".format(
+                    pre_points[0][0], pre_points[0][1], pre_points[1][0],
+                    pre_points[1][1], pre_points[2][0], pre_points[2][1],
+                    tgt_points[0][0], tgt_points[0][1], tgt_points[1][0],
+                    tgt_points[1][1], tgt_points[2][0], tgt_points[2][1],
+                    intersetion_area / union_area,
+                    doa_real_arr[i],
+                    doa_imag_arr[i],
+                    min_aspect_ratio_arr[i]
                 ))
                 plt.grid()
                 pdf = os.path.join(self._params['flags'].model_dir, "single_plot_{}.pdf".format(sample_counter))

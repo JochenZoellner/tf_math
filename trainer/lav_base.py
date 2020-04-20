@@ -11,7 +11,7 @@ flags.define_string('model_dir', '', 'dir with "export"-folder which was checkpo
 flags.define_string('val_list', 'lists/dummy_val.lst', '.lst-file specifying the dataset used for validation')
 flags.define_integer('val_batch_size', 100, 'number of elements in a val_batch')
 flags.define_list('gpu_devices', int, 'space seperated list of GPU indices to use. ', " ", [])
-flags.define_dict('input_fn_params', {}, "key=value pairs defining the configuration of the optimizer.")
+flags.define_dict('input_params', {}, "key=value pairs defining the configuration of the optimizer.")
 flags.FLAGS.parse_flags()
 flags.define_float('gpu_memory', 0.0, 'amount of gpu memory in MB if set above 0')
 flags.define_string("debug_dir", "", "specify dir to save debug outputs, saves are model specific ")
