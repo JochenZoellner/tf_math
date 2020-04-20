@@ -252,9 +252,7 @@ class TrainerBase(object):
             else:
                 eval_name = None
             for (batch, (input_features, targets)) in enumerate(self._input_fn_generator.get_input_fn_val()):
-                self.open_maybe_save_graph(maybe=batch == 1 and self._model.graph_train.global_epoch.numpy() == 1)
                 eval_out_dict = call_graph(input_features, targets)
-                self.close_maybe_save_graph(maybe=batch == 1 and self._model.graph_train.global_epoch.numpy() == 1)
                 self._model.to_tensorboard(eval_out_dict, targets, input_features)
                 val_loss += eval_out_dict["loss"]
                 val_batch_number = batch
