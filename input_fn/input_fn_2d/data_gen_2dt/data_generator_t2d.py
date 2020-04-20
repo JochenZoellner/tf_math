@@ -20,7 +20,28 @@ class DataGeneratorT2D(DataGeneratorBase):
                                           x_sorted=flags.FLAGS.sorted, samples_per_file=flags.FLAGS.samples_per_file,
                                           centered=flags.FLAGS.centered)
 
+    def debug(self):
+        print("Debuggin in data_generator_rp")
+        import matplotlib.pyplot as plt
+        from shapely import geometry
+        inputs, targets = self._debug_batch
+
+        for idx in range(flags.FLAGS.samples_per_file):
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 14))
+            fig.suptitle("{}".format(idx))
+            ax1.fill(targets["points"][idx][:, 0], targets["points"][idx][:, 1], "b", alpha=0.5)
+            ax1.set_aspect(1.0)
+            ax1.set_xlim(-50, 50)
+            ax1.set_ylim(-50, 50)
+
+            ax2.plot(inputs["fc"][idx][0], inputs["fc"][idx][1], label="fc_real")
+            ax2.plot(inputs["fc"][idx][0], inputs["fc"][idx][2], label="fc_imag")
+
+            plt.show()
+
 
 if __name__ == "__main__":
-    data_generator_t2d = DataGeneratorT2D()
-    data_generator_t2d.run()
+    data_generator = DataGeneratorT2D()
+    data_generator.run()
+    if flags.FLAGS.mode == "debug":
+        data_generator.debug()

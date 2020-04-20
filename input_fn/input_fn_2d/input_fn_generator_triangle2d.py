@@ -13,7 +13,7 @@ from util.flags import update_params
 import model_fn.util_model_fn.custom_layers as c_layers
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tf_polygon_2d_helper as tf_p2d
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as t2d
-
+from input_fn.input_fn_2d.input_fn_2d_util import phi_array_open_symetric_no90
 logger = logging.getLogger(__name__)
 
 
@@ -71,7 +71,8 @@ class InputFn2DT(InputFnBase):
         return self.cut_phi_batch(feature_dict), target_dict
 
     def batch_generator(self):
-        _phi_arr = np.arange(self._dphi, np.pi, self._dphi)
+        _phi_arr = phi_array_open_symetric_no90(delta_phi=self._dphi)
+        print(_phi_arr.shape)
         D_TYPE = tf.float32
         phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(_phi_arr, D_TYPE), axis=0), axis=0)
 

@@ -199,6 +199,7 @@ class GraphConv1MultiFF(Graph2D):
         # plt.show()
 
         ff_in = inputs["fc"][:, 1:]
+        # tf.print(ff_in.shape)
         if self.graph_params["pre_activation"]:
             ff_in = getattr(layers, self.graph_params["pre_activation"])(ff_in)
         if self.graph_params["batch_norm"]:

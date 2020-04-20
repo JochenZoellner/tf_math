@@ -428,6 +428,7 @@ class ModelTriangle(ModelBase):
 
     @property
     def graph_signature(self):
+        print("signature", self._flags.data_len)
         return [{'fc': tf.TensorSpec(shape=[self._current_batch_size, 3, self._flags.data_len], dtype=tf.float32)},
                 {'points': tf.TensorSpec(shape=[self._current_batch_size, 3, 2], dtype=tf.float32)}]
 
