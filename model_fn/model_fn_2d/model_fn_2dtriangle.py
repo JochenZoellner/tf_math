@@ -3,6 +3,7 @@ import os
 import shutil
 
 import numpy as np
+import numpy.ma as npm
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from shapely import geometry
@@ -19,7 +20,7 @@ from model_fn.model_fn_base import ModelBase
 class ModelTriangle(ModelBase):
     def __init__(self, params):
         super(ModelTriangle, self).__init__(params)
-        self.mydtype = tf.float64
+        self.mydtype = tf.float32
         self._targets = None
         self._point_dist = None
         self._summary_object = {"tgt_points": [], "pre_points": [], "ordered_best": [], "unordered_best": []}
@@ -200,6 +201,8 @@ class ModelTriangle(ModelBase):
                 [target_dict["points"][x] for x in range(self._params['flags'].val_batch_size)])
             self._summary_object["pre_points"].extend(
                 [output_dict["pre_points"][x] for x in range(self._params['flags'].val_batch_size)])
+            if "fc" in  output_dict and  "fc" not in self._summary_object :
+                self._summary_object["fc"] = output_dict["fc"]
             ob_buffer_list = []
             ub_buffer_list = []
             # for i in range(output_dict["pre_points"].shape[0]):
@@ -246,10 +249,27 @@ class ModelTriangle(ModelBase):
         wo_loss_arr = np.ones(summary_lenght) * np.nan
         doa_real_arr = np.zeros(summary_lenght)
         doa_imag_arr = np.zeros(summary_lenght)
+        doa_real_arr_cut = np.zeros(summary_lenght)
+        doa_imag_arr_cut = np.zeros(summary_lenght)
+
+        from input_fn.input_fn_2d.input_fn_2d_util import phi_array_open_symetric_no90
+        if "fc" in self._summary_object:
+            phi_arr = self._summary_object["fc"][0][0]
+            # print("got phi_arry from summary object", phi_arr.shape)
+        else:
+            phi_arr = phi_array_open_symetric_no90(delta_phi=0.01)
+
+        phi_tf = tf.expand_dims(tf.constant(phi_arr, self.mydtype), axis=0)
+        import model_fn.util_model_fn.custom_layers as c_layers
+        fc_obj = c_layers.ScatterPolygonTF(phi_tf, dtype=self.mydtype, with_batch_dim=False)
+        from input_fn.input_fn_2d.input_fn_generator_triangle2d import InputFn2DT
+        input_gen = InputFn2DT(self._flags)
 
         for i in range(summary_lenght):
             pre_points = np.reshape(self._summary_object["pre_points"][i], (3, 2))
             tgt_points = np.reshape(self._summary_object["tgt_points"][i], (3, 2))
+
+
             # print(pre_points)
             # print(tgt_points)
             pre_polygon = geometry.Polygon([pre_points[0], pre_points[1], pre_points[2]])
@@ -266,19 +286,34 @@ class ModelTriangle(ModelBase):
             # co_loss_arr[i] = self._summary_object["ordered_best"][i]
             # wo_loss_arr[i] = self._summary_object["unordered_best"][i]
             # PLOT = "stripes"
-            dphi = 0.01
-            har = 00.0 / 180.0 * np.pi  # hole_half_angle_rad
-            mac = 00.0 / 180.0 * np.pi  # max_angle_of_view_cut_rad
-            phi_arr = np.concatenate((np.arange(0 + har, np.pi / 2 - mac, dphi),
-                                      np.arange(np.pi / 2 + har, np.pi - mac, dphi)))
+            phi_arr_full = phi_array_open_symetric_no90(delta_phi=0.01)
+            fc_arr_tgt = t2d.make_scatter_data(tgt_points, epsilon=0.002, phi_arr=phi_arr_full)
+            fc_arr_pre = t2d.make_scatter_data(pre_points, epsilon=0.002, phi_arr=phi_arr_full)
 
-            fc_arr_tgt = t2d.make_scatter_data(tgt_points, epsilon=0.002, phi_arr=phi_arr)
-            fc_arr_pre = t2d.make_scatter_data(pre_points, epsilon=0.002, phi_arr=phi_arr)
-            doa_real_arr[i] = np.sum(np.abs(fc_arr_tgt[1] - fc_arr_pre[1])) / np.sum(
-                        np.abs(fc_arr_tgt[1]) + np.abs(fc_arr_pre[1]))
-            doa_imag_arr[i] =  np.sum(np.abs(fc_arr_tgt[2] - fc_arr_pre[2])) / np.sum(
-                        np.abs(fc_arr_tgt[2]) + np.abs(fc_arr_pre[2]))
-            select = min_aspect_ratio_arr[i] > 0.2 and iou_arr[i] < 0.6 and doa_imag_arr[i] < 0.1 and doa_real_arr[i] < 0.1
+            def cut_res(input_points, phi_arr):
+                input_points = tf.squeeze(tf_p2d.make_positiv_orientation(tf.expand_dims(input_points, axis=0)), axis=0).numpy()
+                fc_res = fc_obj(input_points)
+                phi_batch = np.broadcast_to(np.expand_dims(phi_arr, axis=0),
+                                            (1, 1, phi_arr.shape[0]))
+                d_input_points = {"fc": tf.concat((phi_batch, tf.expand_dims(fc_res, axis=0)), axis=1)}
+                fc_res_cut = tf.squeeze(input_gen.cut_phi_batch(d_input_points)["fc"], axis=0)
+                return fc_res_cut
+
+            def calc_doa_x(fc_tgt, fc_pre):
+                return np.sum(np.abs(fc_tgt - fc_pre)) / np.sum(
+                        np.abs(fc_tgt) + np.abs(fc_pre))
+
+            fc_arr_tgt_cut = cut_res(tgt_points, phi_arr)
+            fc_arr_pre_cut = cut_res(pre_points, phi_arr)
+
+            doa_real_arr[i] = calc_doa_x(fc_arr_tgt[1], fc_arr_pre[1])
+            doa_imag_arr[i] = calc_doa_x(fc_arr_tgt[2], fc_arr_pre[2])
+
+            doa_real_arr_cut[i] = calc_doa_x(fc_arr_tgt_cut[1], fc_arr_pre_cut[1])
+            doa_imag_arr_cut[i] = calc_doa_x(fc_arr_tgt_cut[2], fc_arr_pre_cut[2])
+
+            select = min_aspect_ratio_arr[i] > 0.2 and iou_arr[i] < 0.6 and doa_imag_arr_cut[i] < 0.1 and doa_real_arr_cut[i] < 0.1
+            # select = True
             PLOT = "fc"
             if PLOT and select:
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 14))
@@ -293,13 +328,22 @@ class ModelTriangle(ModelBase):
 
                 if PLOT == "fc":
                     # target
-                    ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
-                    ax2.plot(fc_arr_tgt[0], fc_arr_tgt[2], label="imag_tgt")
-                    ## prediction
-                    ax2.plot(fc_arr_pre[0], fc_arr_pre[1], label="real_pre")
-                    ax2.plot(fc_arr_pre[0], fc_arr_pre[2], label="imag_pre")
-                    ax2.legend(loc=4)
+                    plot_cut = False
+                    if plot_cut:
+                        ax2.plot(fc_arr_tgt_cut[0], npm.masked_where(0 == fc_arr_tgt_cut[1], fc_arr_tgt_cut[1]), 'b-', label="real_tgt", linewidth=2)
+                        ax2.plot(fc_arr_tgt_cut[0], npm.masked_where(0 == fc_arr_tgt_cut[2], fc_arr_tgt_cut[2]), 'y-', label="imag_tgt", linewidth=2)
+                        ## prediction
+                        ax2.plot(fc_arr_pre_cut[0], npm.masked_where(0 == fc_arr_pre_cut[1], fc_arr_pre_cut[1]), "g-", label="real_pre_cut", linewidth=2)
+                        ax2.plot(fc_arr_pre_cut[0], npm.masked_where(0 == fc_arr_pre_cut[2], fc_arr_pre_cut[2]), "r-", label="imag_pre_cut", linewidth=2)
+                        ax2.legend(loc=4)
+                    else:
+                        ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
+                        ax2.plot(fc_arr_tgt[0], fc_arr_tgt[2], label="imag_tgt")
+                        ## prediction
+                        ax2.plot(fc_arr_pre_cut[0], fc_arr_pre_cut[1], label="real_pre_cut")
+                        ax2.plot(fc_arr_pre_cut[0], fc_arr_pre_cut[2], label="imag_pre_cut")
 
+                    ax2.set_xlim(0, np.pi)
                     # target scatter
                     # phi_3dim = np.abs(phi_arr - np.pi / 2)
                     # fc_arr_tgt = t2d.make_scatter_data(tgt_points, phi_arr=phi_arr, epsilon=0.002)
@@ -383,18 +427,18 @@ class ModelTriangle(ModelBase):
                 # ax2.set_xticklabels(["0", "$\pi/2$", "$\pi$"])
                 # ax2.legend(loc=2)
 
-                ax1.set_title("(red) pre_points: p1={:2.2f},{:2.2f};p2={:2.2f},{:2.2f};p3={:2.2f},{:2.2f}\n"
-                              "(blue)tgt_points: p1={:2.2f},{:2.2f};p2={:2.2f},{:2.2f};p3={:2.2f},{:2.2f}\n"
-                              "iou: {:1.2f}; doa (real) {:1.2f}; doa (imag) {:1.2f}; maspectratio {:0.2f}".format(
+                ax1.set_title("(red) pre: P1={:3.2f},{:3.2f}|P2={:3.2f},{:3.2f}|P3={:3.2f},{:3.2f}\n"
+                              "(blue)tgt: P1={:3.2f},{:3.2f}|P2={:3.2f},{:3.2f}|P3={:3.2f},{:3.2f}\n"
+                              "IoU: {:1.2f}; MAR {:0.2f}\n"
+                              "DoA (real)    {:1.2f}; DoA (imag)    {:1.2f}\n"
+                              "DoA_cut(real) {:1.2f}; DoA_cut(imag) {:1.2f}".format(
                     pre_points[0][0], pre_points[0][1], pre_points[1][0],
                     pre_points[1][1], pre_points[2][0], pre_points[2][1],
                     tgt_points[0][0], tgt_points[0][1], tgt_points[1][0],
                     tgt_points[1][1], tgt_points[2][0], tgt_points[2][1],
-                    intersetion_area / union_area,
-                    doa_real_arr[i],
-                    doa_imag_arr[i],
-                    min_aspect_ratio_arr[i]
-                ))
+                    intersetion_area / union_area, min_aspect_ratio_arr[i],
+                    doa_real_arr[i], doa_imag_arr[i],
+                    doa_real_arr_cut[i], doa_imag_arr_cut[i]))
                 plt.grid()
                 pdf = os.path.join(self._params['flags'].model_dir, "single_plot_{}.pdf".format(sample_counter))
                 # svg = os.path.join(self._params['flags'].model_dir, "single_plot_{}.svg".format(sample_counter))
