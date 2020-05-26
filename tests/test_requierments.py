@@ -16,7 +16,7 @@ if __name__ == "__main__":
         "scipy",
         "Pillow",
         "scikit-image",
-        "numpy==1.17.4",
+        "numpy>=1.17.4",
         "shapely",
         "descartes",
         "PyPDF2"

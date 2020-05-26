@@ -40,7 +40,7 @@ class ModelTriangle(ModelBase):
     def set_interface(self, val_dataset):
         build_inputs, build_out = super(ModelTriangle, self).set_interface(val_dataset)
         # if self._flags.loss_mode == "input_diff":
-        self.scatter_polygon_tf = c_layer.ScatterPolygonTF(fc_tensor=tf.cast(build_inputs[0]["fc"],
+        self.scatter_polygon_tf = c_layer.ScatterPolygon2D(fc_tensor=tf.cast(build_inputs[0]["fc"],
                                                                              dtype=self.mydtype),
                                                            points_tf=tf.cast(build_inputs[1]["points"],
                                                                              dtype=self.mydtype),
@@ -72,7 +72,7 @@ class ModelTriangle(ModelBase):
 
     def loss(self, predictions, targets):
         if not self.scatter_polygon_tf:
-            self.scatter_polygon_tf = c_layer.ScatterPolygonTF(fc_tensor=tf.cast(predictions["fc"], dtype=self.mydtype),
+            self.scatter_polygon_tf = c_layer.ScatterPolygon2D(fc_tensor=tf.cast(predictions["fc"], dtype=self.mydtype),
                                                                points_tf=tf.cast(predictions["pre_points"],
                                                                                  dtype=self.mydtype),
                                                                with_batch_dim=True, dtype=self.mydtype)
@@ -150,7 +150,7 @@ class ModelTriangle(ModelBase):
         # plt.plot(mask_fc, fc[0, 1, :], "-r", label="input_real")
         # plt.plot(mask_fc, fc[0, 2, :], "-b", label="input_imag")
         # import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as t2dh
-        # scatter_ploygon = t2dh.Fcalculator(p1=targets_oriented[0][0], p2=targets_oriented[0][1], p3=targets_oriented[0][2])
+        # scatter_ploygon = t2dh.ScatterCalculator2D(p1=targets_oriented[0][0], p2=targets_oriented[0][1], p3=targets_oriented[0][2])
         # res_np = scatter_ploygon.call_on_array(fc[0, 0, :])
         # mask_res_np = np.ma.masked_where(fc[0, 0, :] == 0.0, res_np)
         # plt.plot(mask_fc, mask_res_np.real, "+r", label="tgt_np_real")
@@ -261,11 +261,13 @@ class ModelTriangle(ModelBase):
 
         phi_tf = tf.expand_dims(tf.constant(phi_arr, self.mydtype), axis=0)
         import model_fn.util_model_fn.custom_layers as c_layers
-        fc_obj = c_layers.ScatterPolygonTF(phi_tf, dtype=self.mydtype, with_batch_dim=False)
+        fc_obj = c_layers.ScatterPolygon2D(phi_tf, dtype=self.mydtype, with_batch_dim=False)
         from input_fn.input_fn_2d.input_fn_generator_triangle2d import InputFn2DT
         input_gen = InputFn2DT(self._flags)
-
+        select_counter = 0
         for i in range(summary_lenght):
+            if select_counter >= 200:
+                break
             pre_points = np.reshape(self._summary_object["pre_points"][i], (3, 2))
             tgt_points = np.reshape(self._summary_object["tgt_points"][i], (3, 2))
 
@@ -312,10 +314,11 @@ class ModelTriangle(ModelBase):
             doa_real_arr_cut[i] = calc_doa_x(fc_arr_tgt_cut[1], fc_arr_pre_cut[1])
             doa_imag_arr_cut[i] = calc_doa_x(fc_arr_tgt_cut[2], fc_arr_pre_cut[2])
 
-            select = min_aspect_ratio_arr[i] > 0.2 and iou_arr[i] < 0.6 and doa_imag_arr_cut[i] < 0.1 and doa_real_arr_cut[i] < 0.1
+            select = min_aspect_ratio_arr[i] > 0.15 and iou_arr[i] < 0.6 and doa_imag_arr_cut[i] < 0.05 and doa_real_arr_cut[i] < 0.05
             # select = True
             PLOT = "fc"
             if PLOT and select:
+                select_counter += 1
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 14))
 
                 ax1.fill(tgt_points.transpose()[0], tgt_points.transpose()[1], "b", pre_points.transpose()[0],
@@ -328,7 +331,7 @@ class ModelTriangle(ModelBase):
 
                 if PLOT == "fc":
                     # target
-                    plot_cut = False
+                    plot_cut = True
                     if plot_cut:
                         ax2.plot(fc_arr_tgt_cut[0], npm.masked_where(0 == fc_arr_tgt_cut[1], fc_arr_tgt_cut[1]), 'b-', label="real_tgt", linewidth=2)
                         ax2.plot(fc_arr_tgt_cut[0], npm.masked_where(0 == fc_arr_tgt_cut[2], fc_arr_tgt_cut[2]), 'y-', label="imag_tgt", linewidth=2)
@@ -340,8 +343,8 @@ class ModelTriangle(ModelBase):
                         ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
                         ax2.plot(fc_arr_tgt[0], fc_arr_tgt[2], label="imag_tgt")
                         ## prediction
-                        ax2.plot(fc_arr_pre_cut[0], fc_arr_pre_cut[1], label="real_pre_cut")
-                        ax2.plot(fc_arr_pre_cut[0], fc_arr_pre_cut[2], label="imag_pre_cut")
+                        ax2.plot(fc_arr_pre[0], fc_arr_pre[1], label="real_pre")
+                        ax2.plot(fc_arr_pre[0], fc_arr_pre[2], label="imag_pre")
 
                     ax2.set_xlim(0, np.pi)
                     # target scatter
@@ -447,7 +450,7 @@ class ModelTriangle(ModelBase):
                 # plt.show()
                 plt.clf()
                 plt.close()
-
+        print("selected: {}".format(select_counter))
         print("mean iou: {}".format(np.mean(iou_arr)))
         print("sum tgt area: {}; sum pre area: {}; p/t-area: {}".format(np.mean(tgt_area_arr), np.mean(pre_area_arr),
                                                                         np.sum(pre_area_arr) / np.sum(tgt_area_arr)))

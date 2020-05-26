@@ -29,6 +29,8 @@ class InputFn2DT(InputFnBase):
         self._next_batch = None
         self.dataset = None
         self._dphi = 0.01
+        self._val_infinity = False
+        self._batch_size = None
 
         logger.info("Set input_fn_params")
         self._input_params["min_fov"] = 0.0
@@ -52,7 +54,6 @@ class InputFn2DT(InputFnBase):
 
         if not max_fov:
             max_fov = self._input_params["max_fov"]
-
         phi_vec = batch["fc"][0, 0, :]
         max_fov = max_fov / 180.0 * np.pi  # max_angle_of_view_cut_rad
         min_fov = min_fov / 180.0 * np.pi  # hole
@@ -76,12 +77,12 @@ class InputFn2DT(InputFnBase):
         D_TYPE = tf.float32
         phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(_phi_arr, D_TYPE), axis=0), axis=0)
 
-        fc_obj = c_layers.ScatterPolygonTF(phi_tf, dtype=D_TYPE, with_batch_dim=True)
+        fc_obj = c_layers.ScatterPolygon2D(phi_tf, dtype=D_TYPE, with_batch_dim=True)
         phi_batch = np.broadcast_to(np.expand_dims(_phi_arr, axis=0),
-                                    (self._flags.train_batch_size, 1, _phi_arr.shape[0]))
+                                    (self._batch_size, 1, _phi_arr.shape[0]))
         while True:
             point_list = []
-            for i in range(self._flags.train_batch_size):
+            for i in range(self._batch_size):
                 points = t2d.generate_target(x_sorted=True, center_of_weight=self._input_params["centered"])
                 point_list.append(points)
 
@@ -94,14 +95,17 @@ class InputFn2DT(InputFnBase):
 
     def get_input_fn_train(self):
         # One instance of train dataset to produce infinite many samples
-        if "infinity" in self._flags.train_lists[0]:
+        if self._val_infinity:
+            self._batch_size = self._flags.val_batch_size
+        else:
+            self._batch_size = self._flags.train_batch_size
+        if self._val_infinity or "infinity" in self._flags.train_lists[0]:
             parsed_dataset_batched = tf.data.Dataset.from_generator(self.batch_generator,
                                                                     output_types=(
                                                                     {"fc": tf.float32}, {"points": tf.float32}),
                                                                     output_shapes=
-                                                                    ({"fc": (self._flags.train_batch_size, 3, None)},
-                                                                     {"points": (
-                                                                     self._flags.train_batch_size, 3, None)}))
+                                                                    ({"fc": (self._batch_size, 3, None)},
+                                                                     {"points": (self._batch_size, 3, None)}))
             # parsed_dataset_batched = parsed_dataset_batched.map(lambda y, x: (y, x), num_parallel_calls=8)
 
             parsed_dataset_batched = parsed_dataset_batched.map(self.tf_cut_phi_batch, num_parallel_calls=4)
@@ -120,7 +124,7 @@ class InputFn2DT(InputFnBase):
                 parsed_dataset = raw_dataset.map(tfr_helper.parse_t2d_phi_complex, num_parallel_calls=10)
 
             # parsed_dataset = parsed_dataset.shuffle(buffer_size=1000)
-            parsed_dataset_batched = parsed_dataset.batch(self._flags.train_batch_size)
+            parsed_dataset_batched = parsed_dataset.batch(self._batch_size)
             if self._input_params:
                 parsed_dataset_batched = parsed_dataset_batched.map(self.tf_cut_phi_batch)
 
@@ -130,6 +134,9 @@ class InputFn2DT(InputFnBase):
 
     def get_input_fn_val(self):
 
+        if "infinity" in self._flags.val_list:
+            self._val_infinity = True
+            return self.get_input_fn_train()
         with open(self._val_list, "r") as tr_fobj:
             train_filepath_list = [x.strip("\n") for x in tr_fobj.readlines()]
 

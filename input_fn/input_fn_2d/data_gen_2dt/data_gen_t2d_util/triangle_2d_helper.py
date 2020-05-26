@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 # logger.setLevel(logging.DEBUG)
 
 
-
 class Fcalculator:
     def __init__(self, p1=np.array([0.0, 0.0]), p2=np.array([1.0, 0.0]), p3=np.array([0.0, 1.0]),
                  epsilon=np.array(0.0001), no_check=False, complex_phi=False):
@@ -99,7 +98,7 @@ class Fcalculator:
 def multi_triangle_f(phi, p1=np.array([0.0, 0.0], dtype=np.float64), p2=np.array([1.0, 0.0], dtype=np.float64),
                      p3=np.array([0.0, 1.0], dtype=np.float64), epsilon=0.001,
                      no_check=False):
-    """slow straight forward version of Fcalculator, for scalar values of phi only"""
+    """slow straight forward version of ScatterCalculator2D, for scalar values of phi only"""
     phi = np.array(phi, dtype=np.float64)
     if not no_check:  # skip check if valid input is ensured for better performance
         assert np.sum(np.square(np.abs(p1 - p2))) > (10 * epsilon) ** 2

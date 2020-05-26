@@ -15,9 +15,6 @@ if __name__ == "__main__":
     np.set_printoptions(precision=6, suppress=True)
 
 
-# print(logger.getEffectiveLevel())
-
-
 class Fcalculator:
     def __init__(self, points, epsilon=np.array(0.0001)):
         """points is list of tupel with x,y like [(x1,y1), (x2,y2), (x3,y3),...]"""
@@ -31,7 +28,7 @@ class Fcalculator:
         logger.debug("q^2: {}".format(np.abs(q[0] ** 2 + q[1] ** 2)))
         return q
 
-    def F_of_qs(self, q, p0_, p1_, c=0.0):
+    def fc_of_qs(self, q, p0_, p1_, c=0.0):
         p0 = np.array(p0_)
         p1 = np.array(p1_)
         c = np.array(c)
@@ -56,7 +53,7 @@ class Fcalculator:
         logger.debug("s_value: {:1.6f}".format(s_value))
         return s_value
 
-    def F_of_qs_arr(self, q, p0_, p1_, c=0.0):
+    def fc_of_qs_arr(self, q, p0_, p1_, c=0.0):
         p0 = np.array(p0_)
         p1 = np.array(p1_)
         c = np.array(c)
@@ -95,7 +92,7 @@ class Fcalculator:
             p0 = self.points[index - 1]
             p1 = self.points[index]
             logger.debug("p0: {}; p1: {}".format(p0, p1))
-            sum_res += self.F_of_qs_arr(q, p0, p1, c=c)
+            sum_res += self.fc_of_qs_arr(q, p0, p1, c=c)
             logger.debug("sum_res {}".format(sum_res))
 
         final_res = sum_res
@@ -172,24 +169,25 @@ def py_ang(v1, v2):
     return res
 
 
-def generate_target_polygon(min_area=10, max_edge=6, max_size=50):
-    edges = random.randint(3, max_edge)
+def generate_target_polygon(min_area=10, max_edge=6, max_size=50, rng=None):
+    if not rng:
+        rng = np.random.Generator(np.random.PCG64())
+    edges = rng.integers(3, max_edge)
     size = max_size
     # edges = 3
     logger.info("Generating polygon with {} edges".format(edges))
     while True:
-        tuple_list = array_to_tuples(
-            np.reshape([random.uniform(-size, size) for x in range(6)], (3, 2)).astype(np.float32))
+        tuple_list = array_to_tuples(rng.uniform(-size, size, size=(3, 2)).astype(np.float32))
         shots = 0
         while len(tuple_list) < edges:
             shots += 1
             if shots > 100:
                 tuple_list = array_to_tuples(
-                    np.reshape([random.uniform(-size, size) for x in range(6)], (3, 2)).astype(np.float32))
+                    np.reshape([rng.uniform(-size, size) for x in range(6)], (3, 2)).astype(np.float32))
                 shots = 0
             tuple_list_buffer = tuple_list.copy()
-            tuple_list_buffer.insert(random.randint(0, len(tuple_list)),
-                                     (random.uniform(-size, size), random.uniform(-size, size)))
+            tuple_list_buffer.insert(rng.integers(0, len(tuple_list)),
+                                     (rng.uniform(-size, size), rng.uniform(-size, size)))
             linear_ring = geometry.LinearRing(tuple(tuple_list_buffer))
             if linear_ring.is_simple:
                 pointy = 90
@@ -231,15 +229,17 @@ def generate_target_regular_polygon(min_radius=3, max_radius=50, min_edges=3, ma
     return pts_arr_rp, rpf_dict
 
 
-def generate_target_star_polygon(min_radius=3, max_radius=30, edges=3, angle_epsilon=5.0, sectors=False):
-    radius_array = np.random.uniform(low=min_radius, high=max_radius, size=edges - 1)
+def generate_target_star_polygon(min_radius=3, max_radius=30, edges=3, angle_epsilon=5.0, sectors=False, rng=None):
+    if not rng:
+        rng = np.random.Generator(np.random.PCG64())
+    radius_array = rng.uniform(low=min_radius, high=max_radius, size=edges - 1)
 
     if sectors:
-        phi_array = np.random.uniform(low=angle_epsilon, high=360.0 / edges, size=edges - 1)
+        phi_array = rng.uniform(low=angle_epsilon, high=360.0 / edges, size=edges - 1)
         add_epsilon = np.arange(edges - 1) * 360.0 / edges
         phi_array = phi_array + add_epsilon
     else:
-        phi_array = np.random.uniform(low=angle_epsilon, high=360.0 - ((edges - 1) * angle_epsilon), size=edges - 1)
+        phi_array = rng.uniform(low=angle_epsilon, high=360.0 - ((edges - 1) * angle_epsilon), size=edges - 1)
         phi_array.sort()
         add_epsilon = np.arange(edges - 1) * angle_epsilon
         phi_array = phi_array + add_epsilon
@@ -262,7 +262,9 @@ def generate_target_star_polygon(min_radius=3, max_radius=30, edges=3, angle_eps
     return pts_arr_sp
 
 
-def generate_target_star_polygon2(min_radius=3, max_radius=30, edges=3, angle_epsilon=5.0):
+def generate_target_star_polygon2(min_radius=3, max_radius=30, edges=3, angle_epsilon=5.0, rng=None):
+    if not rng:
+        rng = np.random.Generator(np.random.PCG64())
     def normalize(rphi_array):
         negativ_radius_idx = np.argwhere(rphi_array[:, 0] < 0.0)
         rphi_array[negativ_radius_idx, 1] += 180.0
@@ -291,8 +293,8 @@ def generate_target_star_polygon2(min_radius=3, max_radius=30, edges=3, angle_ep
         if loop_counter % 10 == 0:
             logger.warning("{} attemps to generate star-polygon rphi-array".format(loop_counter))
         loop_counter += 1
-        radius_array = np.random.uniform(low=min_radius, high=max_radius, size=edges)
-        phi_array = np.random.uniform(low=angle_epsilon, high=360.0 - ((edges - 1) * angle_epsilon), size=edges)
+        radius_array = rng.uniform(low=min_radius, high=max_radius, size=edges)
+        phi_array = rng.uniform(low=angle_epsilon, high=360.0 - ((edges - 1) * angle_epsilon), size=edges)
         phi_array.sort()
         phi_array += np.arange(edges) * angle_epsilon  # add increasing number of epsilons, avoids similar angles
         rphi_array = np.stack((radius_array, phi_array), axis=1)
@@ -310,7 +312,7 @@ def generate_target_star_polygon2(min_radius=3, max_radius=30, edges=3, angle_ep
         try:
             xy_array = np.exp(1.0j * 2 * np.pi * phi_array / 360.0)  # split phi in real and imag part
             z = np.sum(radius_array * xy_array)  # sum all points in complex plane
-            idx = random.sample(range(edges), 2)  # pick to points (i, j) to adjust their radius
+            idx = rng.choice(range(edges), 2)  # pick to points (i, j) to adjust their radius
             logger.debug("z: {}".format(z))
             logger.debug("xy_array: {}".format(xy_array))
             logger.debug("point i,j indices: {}".format(idx))
@@ -393,8 +395,10 @@ def regular_polygon_points_array_to_rpf(points_array):
     return rpf_dict
 
 
-def generate_rpf(min_radius=3, max_radius=50, min_edges=3, max_edges=8, rotation=True, translation=True):
+def generate_rpf(min_radius=3, max_radius=50, min_edges=3, max_edges=8, rotation=True, translation=True, rng=None):
     """generate random Regular Polygon Format: dict(radius, rotation, translation, edges)"""
+    if not rng:
+        rng = np.random.Generator(np.random.PCG64())
     edges = random.randint(min_edges, max_edges)
     radius = random.uniform(min_radius, max_radius)
     if translation:
@@ -494,7 +498,7 @@ def test_star_polygon():
 # if __name__ == "__main__":
 #     phi_array = np.arange(0.0, np.pi, 0.01)
 #     points = [(0, 0), (0, 10), (10, 0), (0, 0), (0, 10), (10, 0)]
-#     polygon_calculator = Fcalculator(points)
+#     polygon_calculator = ScatterCalculator2D(points)
 #     f_list = [None]*phi_array.shape[0]
 #     for index, phi in enumerate(phi_array):
 #         q = polygon_calculator.q_of_phi(phi)
@@ -522,7 +526,7 @@ def test_star_polygon():
 #     for target in range(loops):
 #         convex_polygon_arr = generate_target_polygon(max_edge=10)
 #         convex_polygon_tuple = array_to_tuples(convex_polygon_arr)
-#         polygon_calculator = Fcalculator(points=convex_polygon_tuple)
+#         polygon_calculator = ScatterCalculator2D(points=convex_polygon_tuple)
 #
 #         phi_array = np.arange(np.pi / 2 - 1.5, np.pi / 2 + 1.5, 0.001)
 #         polygon_scatter_res = polygon_calculator.F_of_phi(phi=phi_array).astype(dtype=np.complex64)
@@ -573,7 +577,7 @@ if __name__ == "__main__":
 #         phi_array = np.arange(np.pi / 2 - 1.5, np.pi / 2 + 1.5, 0.01)
 #         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9.5, 14))
 #
-#         triangel_calculator = triangle_2d_helper.Fcalculator(p1=[points[0][0], points[0][1]],
+#         triangel_calculator = triangle_2d_helper.ScatterCalculator2D(p1=[points[0][0], points[0][1]],
 #                                                              p2=[points[1][0], points[1][1]],
 #                                                              p3=[points[2][0], points[2][1]])
 #         triangle_scatter_res = triangel_calculator.call_on_array(phi_array).astype(dtype=np.complex64)
@@ -585,7 +589,7 @@ if __name__ == "__main__":
 #         # print("phi_array:", phi_array)
 #         # print("##############")
 #         # print("triangle scatter res:", triangle_scatter_res)
-#         polygon_calculator = Fcalculator(points)
+#         polygon_calculator = ScatterCalculator2D(points)
 #
 #         polygon_scatter_res = polygon_calculator.F_of_phi(phi=phi_array).astype(dtype=np.complex64)
 #         # polygon_scatter_res = np.array(

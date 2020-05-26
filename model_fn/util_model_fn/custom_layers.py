@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-class ScatterPolygonTF(tf.keras.layers.Layer):
+class ScatterPolygon2D(tf.keras.layers.Layer):
     def __init__(self, fc_tensor, points_tf=tf.constant([[0, 0], [0, 1], [1, 0]]),
                  epsilon=tf.constant(0.0001), with_batch_dim=True, dtype=tf.float64):
         tf.keras.layers.Layer.__init__(self, trainable=False)

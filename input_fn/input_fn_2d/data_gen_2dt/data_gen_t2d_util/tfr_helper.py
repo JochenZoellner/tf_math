@@ -138,7 +138,7 @@ class Triangle2dSaver(object):
         D_TYPE = tf.float32
         phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(self.phi_arr, D_TYPE), axis=0), axis=0)
 
-        fc_obj = c_layers.ScatterPolygonTF(phi_tf, dtype=D_TYPE, with_batch_dim=True)
+        fc_obj = c_layers.ScatterPolygon2D(phi_tf, dtype=D_TYPE, with_batch_dim=True)
         point_list = []
         for i in range(self.samples_per_file):
             points = t2d.generate_target(x_sorted=self.x_sorted)
@@ -281,7 +281,7 @@ class RegularPolygon2dSaver(object):
         phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(self.phi_arr, self._dtype), axis=0), axis=0)
         bc_dims = [int(self.samples_per_file), 1, len(self.phi_arr)]
         phi_tf_batch = tf.broadcast_to(phi_tf, bc_dims)
-        fc_obj = c_layers.ScatterPolygonTF(phi_tf, dtype=self._dtype, with_batch_dim=True)
+        fc_obj = c_layers.ScatterPolygon2D(phi_tf, dtype=self._dtype, with_batch_dim=True)
         fc_arr = fc_obj(batch_points)
 
         with tf.io.TFRecordWriter(filename) as writer:

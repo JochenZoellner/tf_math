@@ -188,6 +188,10 @@ class GraphConv1MultiFF(Graph2D):
             self._tracked_layers["edge_classifier"] = tf.keras.layers.Dense(self.graph_params["nhidden_max_edges"],
                                                                             activation=tf.nn.softmax,
                                                                             name="edge_classifier")
+        if self.graph_params["area_pred"]:
+            self._tracked_layers["area_regression"] = tf.keras.layers.Dense(self.graph_params["nhidden_max_edges"],
+                                                                            activation=None,
+                                                                            name="area_regression")
 
     @tf.function
     def call(self, inputs, training=False, build=None):
@@ -233,11 +237,12 @@ class GraphConv1MultiFF(Graph2D):
 
         ff_final = self._tracked_layers["ff_final"](ff_in)
         self._graph_out = {"pre_points": ff_final, "fc": inputs["fc"]}
-        edge_final = None
         if self.graph_params["edge_classifier"]:
-            edge_final = self._tracked_layers["edge_classifier"](ff_final)
-
-            self._graph_out = {"pre_points": ff_final, "e_pred": edge_final, "fc": inputs["fc"]}
+            edge_final = self._tracked_layers["edge_classifier"](ff_in)
+            self._graph_out["e_pred"] = edge_final
+        if self.graph_params["edge_classifier"]:
+            area_pred = self._tracked_layers["area_regression"](ff_in)
+            self._graph_out["area_pred"] = area_pred
 
         return self._graph_out
 
