@@ -161,6 +161,8 @@ class GraphConv1MultiFF(Graph2D):
         self.graph_params["batch_norm"] = False
         self.graph_params["nhidden_max_edges"] = 6
         self.graph_params["pre_activation"] = None
+        self.graph_params["area_pred"] = False
+        self.graph_params["pre_points_out"] = True
 
         self.graph_params = update_params(self.graph_params, self._flags.graph_params, "graph")
 
@@ -181,7 +183,8 @@ class GraphConv1MultiFF(Graph2D):
             name = "ff_{}".format(layer_index + 1)
             self._tracked_layers[name] = tf.keras.layers.Dense(n_hidden, activation=tf.nn.leaky_relu, name=name)
 
-        self._tracked_layers["ff_final"] = tf.keras.layers.Dense(self.graph_params["nhidden_dense_final"],
+        if self.graph_params["pre_points_out"]:
+            self._tracked_layers["ff_final"] = tf.keras.layers.Dense(self.graph_params["nhidden_dense_final"],
                                                                  activation=None, name="ff_final")
 
         if self.graph_params["edge_classifier"]:
@@ -189,7 +192,7 @@ class GraphConv1MultiFF(Graph2D):
                                                                             activation=tf.nn.softmax,
                                                                             name="edge_classifier")
         if self.graph_params["area_pred"]:
-            self._tracked_layers["area_regression"] = tf.keras.layers.Dense(self.graph_params["nhidden_max_edges"],
+            self._tracked_layers["area_regression"] = tf.keras.layers.Dense(1,
                                                                             activation=None,
                                                                             name="area_regression")
 
@@ -235,12 +238,14 @@ class GraphConv1MultiFF(Graph2D):
             if training and self.graph_params["normal_noise"] > 0:
                 ff_in += tf.random.normal(tf.shape(ff_in), stddev=self.graph_params["normal_noise"])
 
-        ff_final = self._tracked_layers["ff_final"](ff_in)
-        self._graph_out = {"pre_points": ff_final, "fc": inputs["fc"]}
+        self._graph_out = {"fc": inputs["fc"]}
+        if self.graph_params["pre_points_out"]:
+            ff_final = self._tracked_layers["ff_final"](ff_in)
+            self._graph_out["pre_points"] = ff_final
         if self.graph_params["edge_classifier"]:
             edge_final = self._tracked_layers["edge_classifier"](ff_in)
             self._graph_out["e_pred"] = edge_final
-        if self.graph_params["edge_classifier"]:
+        if self.graph_params["area_pred"]:
             area_pred = self._tracked_layers["area_regression"](ff_in)
             self._graph_out["area_pred"] = area_pred
 

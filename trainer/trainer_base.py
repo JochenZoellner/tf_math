@@ -2,6 +2,7 @@ import glob
 import logging
 import os
 import time
+import json
 
 import tensorflow as tf
 from tensorflow.python.eager import profiler
@@ -126,6 +127,7 @@ class TrainerBase(object):
         self._train_collection = None
         self._params = {'steps_per_epoch': int(self._flags.samples_per_epoch / self._flags.train_batch_size),
                         'num_gpus': len(self._flags.gpu_devices)}
+        self._best_loss_dict = {}
 
     def __del__(self):
         # reset print streams
@@ -215,7 +217,8 @@ class TrainerBase(object):
             # Evaluation on this checkpoint
             self._model.set_mode("eval")
             self.eval()
-
+        with open(os.path.join(self._flags.checkpoint_dir, "best_loss.json"), "w") as bl_fp:
+            json.dump(str(self._best_loss_dict), bl_fp)
 
         self.export()
 
@@ -262,6 +265,9 @@ class TrainerBase(object):
             print("val-loss:{:10.3f}, samples/second:{:8.1f}, time:{:6.1f}"
                   .format(val_loss, (val_batch_number + 1) * self._flags.val_batch_size /
                           (time.time() - t_val), time.time() - t_val))
+            if val_list not in self._best_loss_dict or self._best_loss_dict[val_list][0] > val_loss:
+                print("set new best loss: {}\t{}\t{}".format(os.path.basename(val_list), val_loss.numpy(), self._model.graph_eval.global_epoch.numpy()))
+                self._best_loss_dict[val_list] = [val_loss.numpy(), self._model.graph_eval.global_epoch.numpy()]
             self._model.write_tensorboard(summary_writer_name=os.path.basename(val_list[:-4]))
 
     def export(self):

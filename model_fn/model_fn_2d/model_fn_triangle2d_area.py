@@ -4,20 +4,21 @@ import shutil
 
 import matplotlib.pyplot as plt
 import numpy as np
-from itertools import permutations
 import tensorflow as tf
 
 import model_fn.model_fn_2d.util_2d.graphs_2d as graphs
 from model_fn.model_fn_base import ModelBase
+import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tf_polygon_2d_helper as tf_p2dh
 
 
-class ModelPolygonClassifier(ModelBase):
+class ModelTriangleArea(ModelBase):
     def __init__(self, params):
-        super(ModelPolygonClassifier, self).__init__(params)
+        super(ModelTriangleArea, self).__init__(params)
         self._flags = self._params['flags']
         self._targets = None
         self._point_dist = None
         self._summary_object = {"tgt_points": [], "pre_points": [], "ordered_best": [], "unordered_best": []}
+        self.mape = None
 
     def get_graph(self):
         return getattr(graphs, self._params['flags'].graph)(self._params)
@@ -26,32 +27,37 @@ class ModelPolygonClassifier(ModelBase):
         return 'edges'
 
     def get_predictions(self):
-        return self._graph_out['e_pred']
+        return self._graph_out['area_pred']
 
     def info(self):
         self.get_graph().print_params()
 
-    def get_loss(self):
-        loss = 0.0
-        if 'softmax_crossentropy' == self._flags.loss_mode:
-            loss += tf.sqrt(tf.compat.v1.losses.softmax_cross_entropy(
-                tf.one_hot(tf.squeeze(self._targets['edges'], axis=-1) - 3, depth=4), self._graph_out['e_pred']))
-        elif "abs_diff" == self._flags.loss_mode:
-            loss += tf.compat.v1.losses.absolute_difference(self._targets['edges'], self._graph_out['area_pred'])
-        else:
-            logging.error("no valid loss-mode in loss_params")
-            raise AttributeError
-        loss = tf.reduce_mean(loss)
+    def loss(self, predictions, targets):
+        loss = tf.constant(0.0, dtype=tf.float32)
+
+
+        areas_tgt = tf.expand_dims(tf_p2dh.get_area_of_triangle(targets['points']), axis=-1)
+        # tf.print(tf.shape(areas_tgt), tf.shape(predictions['area_pred']))
+
+        if "relativeError" in self._flags.loss_mode:
+            if not self.mape:
+                self.mape = tf.keras.losses.MeanAbsolutePercentageError()
+            relative_loss = tf.reduce_mean(self.mape(areas_tgt, predictions['area_pred']))
+            loss += relative_loss
+
+        if "mse" in self._flags.loss_mode:
+            loss += tf.reduce_mean(tf.keras.losses.mean_squared_error(areas_tgt, predictions['area_pred']))
+
         return loss
 
-    def export_helper(self):
-        for train_list in self._params['flags'].train_lists:
-            data_id = os.path.basename(train_list)[:-8]
-            shutil.copy(os.path.join("data/synthetic_data", data_id, "log_{}_train.txt".format(data_id)),
-                        os.path.join(self._params['flags'].checkpoint_dir, "export"))
-        data_id = os.path.basename(self._params['flags'].val_list)[:-8]
-        shutil.copy(os.path.join("data/synthetic_data", data_id, "log_{}_val.txt".format(data_id)),
-                    os.path.join(self._params['flags'].checkpoint_dir, "export"))
+    # def export_helper(self):
+    #     for train_list in self._params['flags'].train_lists:
+    #         data_id = os.path.basename(train_list)[:-8]
+    #         shutil.copy(os.path.join("data/synthetic_data", data_id, "log_{}_train.txt".format(data_id)),
+    #                     os.path.join(self._params['flags'].checkpoint_dir, "export"))
+    #     data_id = os.path.basename(self._params['flags'].val_list)[:-8]
+    #     shutil.copy(os.path.join("data/synthetic_data", data_id, "log_{}_val.txt".format(data_id)),
+    #                 os.path.join(self._params['flags'].checkpoint_dir, "export"))
 
     def print_evaluate(self, output_dict, target_dict):
         with tf.compat.v1.Session().as_default():

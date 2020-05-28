@@ -262,13 +262,7 @@ def test_track_gradient_graph_mode():
     return 0
 
 
-
-
 class TestPolygon2DHelper(unittest.TestCase):
-    # def __index__(self):
-    #     super(TestPolygon2DHelper).__init__()
-    #
-    #
 
     def test_get_area_of_triangle(self):
         logger.info("Run test_get_area_of_triangle...")
@@ -392,14 +386,9 @@ class TestPolygon2DHelper(unittest.TestCase):
 if __name__ == "__main__":
     print("run tf_polygon_2d_helper.py as main")
     time.sleep(0.001)
-
     # logger.setLevel("INFO")
+    test_result = unittest.main(verbosity=2)
 
-    # # test_track_gradient_graph_mode()
-    TestPolygon2DHelper().test_get_area_of_triangle_batched()
-    # test_result = unittest.main(verbosity=2)
-    # print(test_result)
-    # exit(0)
 
 
 
