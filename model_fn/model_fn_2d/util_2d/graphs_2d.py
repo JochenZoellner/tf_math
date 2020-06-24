@@ -161,7 +161,7 @@ class GraphConv1MultiFF(Graph2D):
         self.graph_params["batch_norm"] = False
         self.graph_params["nhidden_max_edges"] = 6
         self.graph_params["pre_activation"] = None
-        self.graph_params["area_pred"] = False
+        self.graph_params["pre_area"] = False
         self.graph_params["pre_points_out"] = True
 
         self.graph_params = update_params(self.graph_params, self._flags.graph_params, "graph")
@@ -191,7 +191,7 @@ class GraphConv1MultiFF(Graph2D):
             self._tracked_layers["edge_classifier"] = tf.keras.layers.Dense(self.graph_params["nhidden_max_edges"],
                                                                             activation=tf.nn.softmax,
                                                                             name="edge_classifier")
-        if self.graph_params["area_pred"]:
+        if self.graph_params["pre_area"]:
             self._tracked_layers["area_regression"] = tf.keras.layers.Dense(1,
                                                                             activation=None,
                                                                             name="area_regression")
@@ -245,9 +245,9 @@ class GraphConv1MultiFF(Graph2D):
         if self.graph_params["edge_classifier"]:
             edge_final = self._tracked_layers["edge_classifier"](ff_in)
             self._graph_out["e_pred"] = edge_final
-        if self.graph_params["area_pred"]:
-            area_pred = self._tracked_layers["area_regression"](ff_in)
-            self._graph_out["area_pred"] = area_pred
+        if self.graph_params["pre_area"]:
+            pre_area = self._tracked_layers["area_regression"](ff_in)
+            self._graph_out["pre_area"] = pre_area
 
         return self._graph_out
 

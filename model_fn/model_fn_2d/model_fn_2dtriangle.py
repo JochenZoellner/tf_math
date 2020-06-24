@@ -10,6 +10,7 @@ from shapely import geometry
 
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as t2d
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tf_polygon_2d_helper as tf_p2d
+
 import model_fn.model_fn_2d.util_2d.graphs_2d as graphs
 import model_fn.util_model_fn.losses as losses
 
@@ -23,6 +24,7 @@ class ModelTriangle(ModelBase):
         self.mydtype = tf.float32
         self._targets = None
         self._point_dist = None
+        self.mape = None
         self._summary_object = {"tgt_points": [], "pre_points": [], "ordered_best": [], "unordered_best": []}
         self._graph = self.get_graph()
         self._scatter_calculator = None
@@ -36,6 +38,11 @@ class ModelTriangle(ModelBase):
         self.metrics["eval"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
         self.metrics["train"]["loss_best_point_diff"] = tf.keras.metrics.Mean("loss_best_point_diff", self.mydtype)
         self.metrics["eval"]["loss_best_point_diff"] = tf.keras.metrics.Mean("loss_best_point_diff", self.mydtype)
+
+        self.metrics["train"]["loss_rmse_area"] = tf.keras.metrics.Mean("loss_rmse_area", self.mydtype)
+        self.metrics["eval"]["loss_rmse_area"] = tf.keras.metrics.Mean("loss_rmse_area", self.mydtype)
+        self.metrics["train"]["loss_relativError_area"] = tf.keras.metrics.Mean("loss_relativError_area", self.mydtype)
+        self.metrics["eval"]["loss_relativError_area"] = tf.keras.metrics.Mean("loss_relativError_area", self.mydtype)
 
     def set_interface(self, val_dataset):
         build_inputs, build_out = super(ModelTriangle, self).set_interface(val_dataset)
@@ -82,12 +89,6 @@ class ModelTriangle(ModelBase):
         pre_points = tf_p2d.make_positiv_orientation(pre_points, dtype=self.mydtype)
         pre_in = self.scatter_polygon_tf(points_tf=pre_points)
         tgt_in = fc[:, 1:, :]
-        # if "batch_norm" in self._flags.graph_params and self._flags.graph_params["batch_norm"]:
-        #     pre_in = tf.cast(self._graph._tracked_layers["batch_norm"](tf.cast(pre_in, dtype=tf.float32)),
-        #                      dtype=self.mydtype)
-        #     tgt_in = tf.cast(self._graph._tracked_layers["batch_norm"](tf.cast(fc[:, 1:, :], dtype=tf.float32)),
-        #                      dtype=self.mydtype)
-
         # ### plot
         # fig, (ax1, ax2, ax3) = plt.subplots(nrows=3)
         # fig.suptitle("compare loss")
@@ -141,6 +142,21 @@ class ModelTriangle(ModelBase):
         # if "best_point_diff" in self._flags.loss_mode:
         #     self._loss += loss_best_point_diff
 
+        areas_tgt = tf.expand_dims(tf_p2d.get_area_of_triangle(targets['points']), axis=-1)
+        # tf.print(tf.shape(areas_tgt), tf.shape(predictions['pre_area']))
+
+        if not self.mape:
+            self.mape = tf.keras.losses.MeanAbsolutePercentageError()
+        relative_loss = tf.reduce_mean(self.mape(areas_tgt, predictions['pre_area']))
+        if "relativeError_area" in self._flags.loss_mode:
+            self._loss += relative_loss
+
+        mse_area = tf.reduce_mean(tf.keras.losses.mean_squared_error(areas_tgt, predictions['pre_area']))
+        if "mse_area" in self._flags.loss_mode:
+            self._loss += mse_area
+
+        self.metrics[self._mode]["loss_rmse_area"](mse_area)
+        self.metrics[self._mode]["loss_relativError_area"](relative_loss)
         self.metrics[self._mode]["loss_input_diff"](loss_input_diff)
         self.metrics[self._mode]["loss_point_diff"](loss_point_diff)
 

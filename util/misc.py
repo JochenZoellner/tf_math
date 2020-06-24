@@ -90,6 +90,19 @@ def get_path_from_exportdir(model_dir, pattern, not_pattern='cm_tc.txt'):
                                                                                                        export_dir))
 
 
+def get_from_keyword(filepath, keyword, separator=":", strip=" "):
+    """find value of a keyword in filepath. expect 'separator' after keyword and the result to the end of line"""
+    assert os.path.isfile(filepath)
+    assert isinstance(separator, str)
+    assert isinstance(strip, str)
+    assert isinstance(keyword, str)
+    with open(filepath, "r") as f_obj:
+        string = f_obj.read()
+    value = string[string.find(keyword):].split(separator)[1].split("\n")[0].strip(strip)
+    logging.info("Keyword: {} has the value: {}".format(keyword, value))
+    return value
+
+
 if __name__ == "__main__":
     print("test print redirection")
     print("Hello only Console")

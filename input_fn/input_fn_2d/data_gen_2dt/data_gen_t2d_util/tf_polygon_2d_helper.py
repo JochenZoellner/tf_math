@@ -232,6 +232,9 @@ def get_area_of_triangle(points):
     red_prod = tf.reduce_prod(tf.broadcast_to(s, tf.shape(tf.transpose(euclid_distances))) - tf.transpose(euclid_distances), axis=0)
     area = tf.sqrt(s * red_prod)
     logger.debug("area: {}".format(area))
+    if np.min(area) < 10.0:
+        logger.warning("small area detected!")
+        logger.warning("sorted areas: {}".format(np.sort(area)))
     logger.debug("get_area_of_triangle... Done.")
     return area
 

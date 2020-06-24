@@ -3,11 +3,9 @@ import os
 from collections import Iterable, Iterator
 from numbers import Number
 
-from util.io_helpers import DefaultIOContext
-
 
 class ListMixDefinition(object):
-    def __init__(self, list_filenames, mixing_ratio, io_context=DefaultIOContext()):
+    def __init__(self, list_filenames, mixing_ratio):
         """
         JUST a container holding some information and checking if images exist
         """
@@ -17,8 +15,8 @@ class ListMixDefinition(object):
         assert isinstance(mixing_ratio, list)
         for list_filename in list_filenames:
             assert isinstance(list_filename, str)
-            assert os.path.isfile(io_context.get_io_filepath(list_filename)), \
-                "{} does not exist!".format(io_context.get_io_filepath(list_filename))
+            assert os.path.isfile(list_filename), \
+                "{} does not exist!".format(list_filename)
         for part in mixing_ratio:
             assert isinstance(part, Number)
         self._list_filenames = list_filenames
@@ -27,7 +25,6 @@ class ListMixDefinition(object):
     @property
     def list_filenames(self):
         """
-
         :rtype: list[str]
         """
         return self._list_filenames

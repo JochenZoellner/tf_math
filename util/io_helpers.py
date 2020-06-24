@@ -26,34 +26,3 @@ def file_path_with_mkdirs(path_with_filen_name):
             if exc.errno != errno.EEXIST:
                 raise
     return path_with_filen_name
-
-
-class IOContext(object):
-    def get_io_filepath(self, filepath):
-        """
-
-        :param filepath:
-        :type filepath: unicode
-        """
-        raise NotImplementedError()
-
-
-class DefaultIOContext(IOContext):
-    def get_io_filepath(self, filepath):
-        return filepath
-
-
-class ReplaceIOContext(IOContext):
-    def __init__(self, old, new):
-        """
-
-        :param old:
-        :type old: unicode
-        :param new:
-        :type new: unicode
-        """
-        self._old = old
-        self._new = new
-
-    def get_io_filepath(self, filepath):
-        return filepath.replace(self._old, self._new, 1)

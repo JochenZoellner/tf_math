@@ -8,7 +8,7 @@ QUEUE="gpu${GPU}"
 EPOCH=40
 set -xe
 
-DATASET="t2d_tf_314_1M_po"
+DATASET="t2d_tf_314_1M_po_B"
 DATALEN=314
 mkdir -p models/dataset_${DATASET}/${ID_SERIES}
 for parameter in 26.0 27.0 28.0 29.0 31.0 32.0 33.0 34.0 36.0 37.0 38.0 39.0 41.0 42.0 43.0\
@@ -23,7 +23,7 @@ do
       --epochs $EPOCH
       --model_type ModelTriangleArea
       --graph GraphConv1MultiFF
-      --graph_params area_pred=True pre_points_out=False
+      --graph_params pre_area=True pre_points_out=False
       --loss_mode relativeError
       --print_to file
       --data_len ${DATALEN}

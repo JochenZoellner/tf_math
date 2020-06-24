@@ -27,7 +27,7 @@ class ModelTriangleArea(ModelBase):
         return 'edges'
 
     def get_predictions(self):
-        return self._graph_out['area_pred']
+        return self._graph_out['pre_area']
 
     def info(self):
         self.get_graph().print_params()
@@ -37,16 +37,16 @@ class ModelTriangleArea(ModelBase):
 
 
         areas_tgt = tf.expand_dims(tf_p2dh.get_area_of_triangle(targets['points']), axis=-1)
-        # tf.print(tf.shape(areas_tgt), tf.shape(predictions['area_pred']))
+        # tf.print(tf.shape(areas_tgt), tf.shape(predictions['pre_area']))
 
         if "relativeError" in self._flags.loss_mode:
             if not self.mape:
                 self.mape = tf.keras.losses.MeanAbsolutePercentageError()
-            relative_loss = tf.reduce_mean(self.mape(areas_tgt, predictions['area_pred']))
+            relative_loss = tf.reduce_mean(self.mape(areas_tgt, predictions['pre_area']))
             loss += relative_loss
 
         if "mse" in self._flags.loss_mode:
-            loss += tf.reduce_mean(tf.keras.losses.mean_squared_error(areas_tgt, predictions['area_pred']))
+            loss += tf.reduce_mean(tf.keras.losses.mean_squared_error(areas_tgt, predictions['pre_area']))
 
         return loss
 
