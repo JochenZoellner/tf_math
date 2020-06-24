@@ -125,13 +125,14 @@ if __name__ == "__main__":
     dphi = test_batch[0]["fc"][0, 0]
     # print("test_batch shape: {}".format(test_batch[0]["fc"].numpy().shape))
     phi_array = test_batch[0]["fc"][0, 0]
+    print(phi_array)
 
     len_phi_array = phi_array.shape[0]
     first, second = phi_array[:len_phi_array//2], phi_array[len_phi_array//2:]
     firsth_batch = test_batch[0]["fc"][:,:len_phi_array//2]
     masked_firsth_batch = np.where(signchange(firsth_batch[:]))
     # print("first, second: {}; {}".format(first.shape[0], second.shape[0]))
-    # print("len_phi: {}; ".format(len_phi_array))
+    print("len_phi: {}; ".format(len_phi_array))
     #
     # print("dphi: {}".format(dphi))
     # first_zero_crossing = []
@@ -146,7 +147,7 @@ if __name__ == "__main__":
         # print(mask_phi)
 
 
-    N = 1000000
+    N = 1000
     first_zero_crossing = []
     triangle_area_arr = np.empty(N)
     for (batch, (input_features, targets)) in enumerate(input_fn_generator.get_input_fn_val()):
