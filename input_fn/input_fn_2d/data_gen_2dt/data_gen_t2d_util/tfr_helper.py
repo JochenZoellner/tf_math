@@ -138,7 +138,7 @@ class Triangle2dSaver(object):
         D_TYPE = tf.float32
         phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(self.phi_arr, D_TYPE), axis=0), axis=0)
 
-        fc_obj = c_layers.ScatterPolygon2D(phi_tf, dtype=D_TYPE, with_batch_dim=True)
+        fc_obj = c_layers.ScatterPolygon2D(phi_tf, epsilon=self.epsilon, dtype=D_TYPE, with_batch_dim=True)
         point_list = []
         for i in range(self.samples_per_file):
             points = t2d.generate_target(x_sorted=self.x_sorted)
@@ -195,7 +195,7 @@ class Polygon2dSaver(object):
         for i in range(self.samples_per_file):
             points = polygon2d.generate_target_polygon(max_edge=self.max_edges, max_size=self.max_size)
             edges = points.shape[0]
-            fc_arr = polygon2d.Fcalculator(points, epsilon=np.array(0.0001)).F_of_phi(phi=self.phi_arr).astype(
+            fc_arr = polygon2d.Fcalculator(points, epsilon=self.epsilon).F_of_phi(phi=self.phi_arr).astype(
                 dtype=np.complex64)
             fc_arr = np.stack((self.phi_arr, fc_arr.real, fc_arr.imag), axis=0).astype(np.float32)
             serialized_sample = self.serialize_example_pyfunction(edges=edges, points=points, fc_arr=fc_arr)

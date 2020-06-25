@@ -84,7 +84,7 @@ class ScatterCalculator2D:
         f_p1_tf = -tf.cast(1.0, dtype=tf.complex128) * tf.math.exp(j_tf * (tf.cast(complex_dot(p1_tf, q_tf), dtype=tf.complex128) + c_tfc))
         case1_array_tf = tf.cast(scale_tf * complex_dot(p0p1_tf, q_cross_tf), dtype=tf.complex128) * (f_p1_tf - f_p0_tf) / tf.cast(complex_dot(p0p1_tf, q_tf), dtype=tf.complex128)
         case2_array_tf = tf.cast(scale_tf * complex_dot(p0p1_tf, q_cross_tf), dtype=tf.complex128) * -j_tf * tf.math.exp(j_tf * tf.cast(complex_dot(p0_tf, q_tf) + c_tf, dtype=tf.complex128))
-        res_array_tf = tf.where(tf.math.abs(complex_dot(p0p1_tf, q_tf)) >= 0.0001, case1_array_tf, case2_array_tf)
+        res_array_tf = tf.where(tf.math.abs(complex_dot(p0p1_tf, q_tf)) >= self.epsilon_tf, case1_array_tf, case2_array_tf)
 
         if not self._debug:
             return res_array_tf
@@ -234,7 +234,10 @@ def get_area_of_triangle(points):
     logger.debug("area: {}".format(area))
     if np.min(area) < 10.0:
         logger.warning("small area detected!")
-        logger.warning("sorted areas: {}".format(np.sort(area)))
+        if tf.rank(area) >= 1:
+            logger.warning("sorted areas: {}".format(np.sort(area)))
+        else:
+            logger.warning("sorted areas: {}".format(area))
     logger.debug("get_area_of_triangle... Done.")
     return area
 

@@ -6,6 +6,8 @@ import time
 import uuid
 
 import numpy as np
+import deprecation
+
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""  # hide all gpu's until needed
 import tensorflow as tf
@@ -24,15 +26,19 @@ flags.define_string("data_id", "magic_synthetic_dataset", "select a name unique 
 flags.define_string('print_to', 'console', 'write prints to "console, "file", "both"')
 flags.define_boolean("complex_phi", False, "use values for a and b not depending from phi")
 flags.define_boolean("centered", False, "use values for a and b not depending from phi")
+flags.define_boolean("sorted", False, "use values for a and b not depending from phi")
+flags.define_float("epsilon", 0.0001, "small value to handle numerical critical points")
+flags.define_float("dphi", 0.01, "distance between points in the phi array")
 flags.define_string("mode", "val", "select 'val' or 'train'")
 flags.define_list('files_train_val', int, "[int(train_files), int(val_files)]",
                   'files to generate for train data/val data', default_value=[1000, 10])
 flags.define_integer("samples_per_file", 1000, "set number of samples saved in each file")
 flags.define_integer("jobs", -1, "set number of samples saved in each file")
 
-if __name__ == "__main__":
-    main_data_out = "data/synthetic_data/{}".format(flags.FLAGS.data_id)
 
+@deprecation.deprecated(details="Use data_generator_t2d instead")
+def main():
+    main_data_out = "data/synthetic_data/{}".format(flags.FLAGS.data_id)
     tee_path = os.path.join(main_data_out, "log_{}_{}.txt".format(flags.FLAGS.data_id, flags.FLAGS.mode))
     if not os.path.isdir(os.path.dirname(tee_path)):
         os.makedirs(os.path.dirname(tee_path))
@@ -56,8 +62,9 @@ if __name__ == "__main__":
 
     flags.print_flags()
     timer1 = time.time()
-    dphi = 0.01
+    dphi = flags.FLAGS.dphi
     complex_phi = flags.FLAGS.complex_phi
+    epsilon = flags.FLAGS.epsilon
     # complex_phi = False
 
     if not complex_phi:
@@ -73,6 +80,8 @@ if __name__ == "__main__":
     data_folder = os.path.join(main_data_out, flags.FLAGS.mode)
     data_points_per_sample = phi_arr.shape[0]
     bytes_to_write = 4 * 3 * data_points_per_sample * number_of_files * flags.FLAGS.samples_per_file / 1024 ** 2
+    D_TYPE = tf.float32
+    print("dphi: {}; epsilon: {}, saved dtype: {}", dphi, epsilon, D_TYPE)
     print("data points per sample: {}".format(data_points_per_sample))
     print("estimated space in MB: {:0.1f}".format(bytes_to_write))
     print("{} samples to generate.".format(number_of_files * flags.FLAGS.samples_per_file))
@@ -81,21 +90,12 @@ if __name__ == "__main__":
     filename_list = list([os.path.join(data_folder, "data_{:07d}.tfr".format(x)) for x in range(number_of_files)])
 
     print("generating samples...")
-    D_TYPE = tf.float32
 
-    t2d_saver_obj = tfr_helper.Triangle2dSaver(epsilon=0.001, phi_arr=tf.constant(phi_arr, D_TYPE), x_sorted=True,
+    t2d_saver_obj = tfr_helper.Triangle2dSaver(epsilon=epsilon, phi_arr=tf.constant(phi_arr, D_TYPE),
+                                               x_sorted=flags.FLAGS.sorted,
                                                samples_per_file=samples_per_file, complex_phi=complex_phi,
                                                centered=flags.FLAGS.centered)
 
-    # save_TFR_x = partial(tfr_helper.save_tfr_t2d, samples=flags.FLAGS.samples_per_file)
-    # pool = multiprocessing.Pool(8)
-    # if flags.FLAGS.jobs <= 0:
-    #     jobs = os.cpu_count()
-    # else:
-    #     jobs = flags.FLAGS.jobs
-    # pool = multiprocessing.Pool(1)
-    # pool.map(t2d_saver_obj.save_file_tf, filename_list)
-    # pool.close()
     for i in filename_list:
         t2d_saver_obj.save_file_tf(i)
 
@@ -158,3 +158,6 @@ if __name__ == "__main__":
     #     # Creates batches by randomly shuffling tensors
     #     images, labels = tf.train.shuffle_batch([image, label], batch_size=10, capacity=30, num_threads=1,
     #                                             min_after_dequeue=10)
+
+if __name__ == "__main__":
+    main()

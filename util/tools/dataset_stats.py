@@ -146,8 +146,7 @@ if __name__ == "__main__":
 
         # print(mask_phi)
 
-
-    N = 1000
+    N = 1000000
     first_zero_crossing = []
     triangle_area_arr = np.empty(N)
     for (batch, (input_features, targets)) in enumerate(input_fn_generator.get_input_fn_val()):
