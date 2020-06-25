@@ -219,7 +219,7 @@ def make_positiv_orientation(batched_point_squence, dtype=tf.float32):
     return batched_point_squence
 
 
-def get_area_of_triangle(points):
+def get_area_of_triangle(points, smallareawarning=10.0):
     """points is tensor with shape [3x2]"""
     logger.debug("get_area_of_triangle...")
     assert tf.is_tensor(points)
@@ -232,12 +232,17 @@ def get_area_of_triangle(points):
     red_prod = tf.reduce_prod(tf.broadcast_to(s, tf.shape(tf.transpose(euclid_distances))) - tf.transpose(euclid_distances), axis=0)
     area = tf.sqrt(s * red_prod)
     logger.debug("area: {}".format(area))
-    if np.min(area) < 10.0:
-        logger.warning("small area detected!")
-        if tf.rank(area) >= 1:
-            logger.warning("sorted areas: {}".format(np.sort(area)))
-        else:
-            logger.warning("sorted areas: {}".format(area))
+    if tf.executing_eagerly():
+        if np.min(area) < smallareawarning:
+            logger.warning("small area detected!")
+
+            if tf.rank(area) >= 1:
+                logger.warning("sorted areas: {}".format(np.sort(area)))
+            else:
+                logger.warning("sorted areas: {}".format(area))
+    else:
+        if tf.reduce_min(area) < smallareawarning:
+            logger.warning("small area detected!")
     logger.debug("get_area_of_triangle... Done.")
     return area
 

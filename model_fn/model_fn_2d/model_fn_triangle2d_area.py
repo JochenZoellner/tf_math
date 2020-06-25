@@ -36,7 +36,7 @@ class ModelTriangleArea(ModelBase):
         loss = tf.constant(0.0, dtype=tf.float32)
 
 
-        areas_tgt = tf.expand_dims(tf_p2dh.get_area_of_triangle(targets['points']), axis=-1)
+        areas_tgt = tf.expand_dims(tf_p2dh.get_area_of_triangle(targets['points'], smallareawarning=9.0), axis=-1)
         # tf.print(tf.shape(areas_tgt), tf.shape(predictions['pre_area']))
 
         if "relativeError" in self._flags.loss_mode:
