@@ -15,4 +15,3 @@ PARAMS="
 
 
 CUDA_VISIBLE_DEVICES="" PYTHONPATH=/home/$USER/devel/projects/projectneiss2d/tf_neiss:$PYTHONPATH python -u ./tf_neiss/util/tools/plot_series_json.py ${PARAMS} "$@"
-ONPATH=/home/$USER/devel/projects/projectneiss2d/tf_neiss:$PYTHONPATH python -u ./tf_neiss/util/tools/dataset_stats.py ${PARAMS} "$@"
