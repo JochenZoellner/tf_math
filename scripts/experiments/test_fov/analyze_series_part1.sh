@@ -6,11 +6,11 @@ DATASET="t2d_min_fov_exp"
 ID_SERIES="min_fov_run_"
 PARAMS="
 --series_dir \
-    models/${DATASET}${ID_SERIES}0 \
-    models/${DATASET}${ID_SERIES}1 \
-    models/${DATASET}${ID_SERIES}2 \
-    models/${DATASET}${ID_SERIES}3 \
-    models/${DATASET}${ID_SERIES}4 \
+    models/${DATASET}/${ID_SERIES}0 \
+    models/${DATASET}/${ID_SERIES}1 \
+    models/${DATASET}/${ID_SERIES}2 \
+    models/${DATASET}/${ID_SERIES}3 \
+    models/${DATASET}/${ID_SERIES}4 \
 "
 
 
