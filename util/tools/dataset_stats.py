@@ -16,7 +16,7 @@ logger = logging.getLogger("dataset_stats.py")
 # logger.setLevel("INFO")
 
 flags.define_string('val_list', None, '.lst-file specifying the dataset used for validation')
-flags.define_integer('data_len', 314, 'F(phi) amount of values saved in one line')
+# flags.define_integer('data_len', 314, 'F(phi) amount of values saved in one line')
 flags.define_dict('input_params', {}, "key=value pairs defining the configuration of the input function."
                   "input Pipeline parametrization, see input_fn.input_fn_<your-project> for usage.")
 flags.define_integer("batch_limiter", -1, "set to positiv value to stop validation after this number of batches")
@@ -25,8 +25,12 @@ flags.define_boolean('complex_phi', False, "if set: a=phi.real, b=phi.imag, inst
 flags.define_integer('val_batch_size', 100, 'number of elements in a val_batch between training '
                                             'epochs(default: %(default)s). '
                                             'has no effect if status is not "train"')
+flags.define_integer("samples", 10000, "set how many samples from the list should be processed to make "
+                                       "distribution plot")
+flags.define_string('plot_prefix', "", '.lst-file specifying the dataset used for validation')
 
-def find_result_files(series_dir, pattern="best_loss.json", not_pattern="fritz"):
+
+def find_result_files(series_dir, pattern="best_loss.json"):
     """returns a list with PosixPaths matching 'pattern' recursively in 'series_dir'"""
     logger.info("run 'find_result_files' on: {}".format(series_dir))
     assert os.path.isdir(series_dir), "{} is no valid directory!".format(series_dir)
@@ -36,6 +40,7 @@ def find_result_files(series_dir, pattern="best_loss.json", not_pattern="fritz")
     logger.info("'find_result_files'...Done.")
     file_paths.sort()
     return file_paths
+
 
 def series_to_array(file_paths):
     target_fp_list = find_result_files(series_dir=file_paths)
@@ -60,7 +65,7 @@ def series_to_array(file_paths):
     return xy_array_sorted
 
 
-def signchange(array):
+def sign_change(array):
     """"""
     asign = np.sign(array)
     signchange = ((np.roll(asign, 1) - asign) != 0).astype(bool)
@@ -69,7 +74,7 @@ def signchange(array):
     return signchange
 
 
-def plot_area_distribution(triangle_area_arr):
+def plot_area_distribution(triangle_area_arr, result_dir):
     plt.figure(figsize=(8, 4))
     sorted_area = np.sort(triangle_area_arr)
     # print(triangle_area_arr[:500])
@@ -83,14 +88,14 @@ def plot_area_distribution(triangle_area_arr):
     plt.ylabel("occurence")
     plt.grid()
     plt.draw()
-    plt.savefig("area_distribution.pdf")
+    plt.savefig("{}/{}area_distribution.pdf".format(result_dir, flags.FLAGS.plot_prefix))
     # plt.ylabel("relativ error [%]")
     # plt.xlabel("min_fov [°]")
     # plt.savefig("plot_series_json.pdf")
 
 
-def plot_zero_crossing(first_zero_crossing):
-    fzc_arr = np.array(first_zero_crossing)
+def plot_zero_crossing(first_zero_crossing, result_dir):
+    fzc_arr = first_zero_crossing
     plt.figure(figsize=(8, 4))
     plt.hist(fzc_arr, bins=1000)
     plt.xlim((0, 90))
@@ -104,7 +109,7 @@ def plot_zero_crossing(first_zero_crossing):
     # plt.xlabel("min_fov [°]")
     # plt.savefig("plot_series_json.pdf")
     plt.draw()
-    plt.savefig("zero_crossing.pdf")
+    plt.savefig("{}/{}zero_crossing.pdf".format(result_dir, flags.FLAGS.plot_prefix))
     plt.cla()
     plt.close()
 
@@ -116,41 +121,26 @@ if __name__ == "__main__":
     # logging.basicConfig(level="INFO")
     logger.debug("CWD: {}".format(os.getcwd()))
     assert flags.FLAGS.val_list, "--val_list must be set!"
-    target_fp_list = []
-    array_list = []
+
     input_fn_generator = InputFn.InputFn2DT(flags.FLAGS)
     dataset_val = input_fn_generator.get_input_fn_val()
     test_batch = next(iter(dataset_val))
 
-    dphi = test_batch[0]["fc"][0, 0]
-    # print("test_batch shape: {}".format(test_batch[0]["fc"].numpy().shape))
     phi_array = test_batch[0]["fc"][0, 0]
-    print(phi_array)
+    logger.info("phi_array:\n{}".format(phi_array))
 
     len_phi_array = phi_array.shape[0]
     first, second = phi_array[:len_phi_array//2], phi_array[len_phi_array//2:]
-    firsth_batch = test_batch[0]["fc"][:,:len_phi_array//2]
-    masked_firsth_batch = np.where(signchange(firsth_batch[:]))
+    firsth_batch = test_batch[0]["fc"][:, :len_phi_array//2]
+    masked_firsth_batch = np.where(sign_change(firsth_batch[:]))
     # print("first, second: {}; {}".format(first.shape[0], second.shape[0]))
-    print("len_phi: {}; ".format(len_phi_array))
-    #
-    # print("dphi: {}".format(dphi))
-    # first_zero_crossing = []
-    # for idx, sample in enumerate(test_batch[0]["fc"][-15:-4]):
-    #     mask_phi = np.ma.masked_where(np.invert(signchange(sample[1, :])), sample[0, :].numpy())
-    #     # print(sample[1, len_phi_array//2-4:len_phi_array//2+4].numpy())
-    #     print(-mask_phi[:len_phi_array//2].max() * 180.0 / np.pi + 90)
-    #     print(mask_phi[len_phi_array//2:].min() * 180.0 / np.pi - 90)
-    #     first_zero_crossing.append(-mask_phi[:len_phi_array//2].max() * 180.0 / np.pi + 90)
-    #     first_zero_crossing.append(mask_phi[len_phi_array//2:].min() * 180.0 / np.pi - 90)
+    logger.info("len_phi: {}; ".format(len_phi_array))
 
-        # print(mask_phi)
-
-    N = 1000000
-    first_zero_crossing = []
+    N = flags.FLAGS.samples
+    first_zero_crossing = np.empty(2*N)
     triangle_area_arr = np.empty(N)
     for (batch, (input_features, targets)) in enumerate(input_fn_generator.get_input_fn_val()):
-        if flags.FLAGS.val_batch_size*(batch) >= N:
+        if flags.FLAGS.val_batch_size * batch >= N:
             break
         if flags.FLAGS.batch_limiter != -1 and flags.FLAGS.batch_limiter <= batch:
             print(
@@ -158,14 +148,16 @@ if __name__ == "__main__":
             break
 
         for idx, sample in enumerate(input_features["fc"]):
-            mask_phi = np.ma.masked_where(np.invert(signchange(sample[1, :])), sample[0, :].numpy())
+            mask_phi = np.ma.masked_where(np.invert(sign_change(sample[1, :])), sample[0, :].numpy())
+            first_zero_crossing[2*batch*flags.FLAGS.val_batch_size+2*idx:(2*batch)*flags.FLAGS.val_batch_size+2*(idx+1)] = \
+                np.ma.array([(-mask_phi[:len_phi_array // 2].max() * 180.0 / np.pi + 90), (mask_phi[len_phi_array // 2:].min() * 180.0 / np.pi - 90)])
             # print(sample[1, len_phi_array//2-4:len_phi_array//2+4].numpy())
             # print(-mask_phi[:len_phi_array // 2].max() * 180.0 / np.pi + 90)
             # print(mask_phi[len_phi_array // 2:].min() * 180.0 / np.pi - 90)
-            first_zero_crossing.append(-mask_phi[:len_phi_array // 2].max() * 180.0 / np.pi + 90)
-            first_zero_crossing.append(mask_phi[len_phi_array // 2:].min() * 180.0 / np.pi - 90)
         triangle_area_arr[batch*flags.FLAGS.val_batch_size:(batch+1)*flags.FLAGS.val_batch_size] = tf_p2dh.get_area_of_triangle(targets['points'])
 
-
-    plot_area_distribution(triangle_area_arr)
-    plot_zero_crossing(first_zero_crossing)
+    result_dir = os.path.join("out", os.path.basename(flags.FLAGS.val_list)[:-4])
+    if not os.path.isdir(result_dir):
+        os.makedirs(result_dir)
+    plot_area_distribution(triangle_area_arr, result_dir)
+    plot_zero_crossing(first_zero_crossing, result_dir)

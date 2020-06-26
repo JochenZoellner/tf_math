@@ -52,7 +52,7 @@ def series_to_array(file_paths):
 
 if __name__ == "__main__":
     # logging.basicConfig()
-    logging.basicConfig(level="DEBUG")
+    logging.basicConfig(level="INFO")
     np.set_printoptions(precision=6, suppress=True)
     # logging.basicConfig(level="INFO")
     logger.debug("CWD: {}".format(os.getcwd()))
@@ -71,11 +71,12 @@ if __name__ == "__main__":
     plt.plot(mean_array[0], mean_array[1])
     for run in array_list:
         plt.plot(run[0], run[1], "r.", markersize=2)
-
+    out_folder = os.path.join(*os.path.split(flags.FLAGS.series_dirs[0])[:-1])
+    logger.info("output folder: {}".format(out_folder))
     plt.grid()
     plt.ylabel("relativ error [%]")
     plt.xlabel("min_fov [°]")
-    plt.savefig("plot_series_json.pdf")
-    plt.show()
+    plt.savefig(os.path.join(out_folder, "plot_error_by_min_fov.pdf"))
+
 
 
