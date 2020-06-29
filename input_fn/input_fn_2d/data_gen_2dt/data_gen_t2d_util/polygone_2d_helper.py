@@ -399,7 +399,7 @@ def generate_rpf(min_radius=3, max_radius=50, min_edges=3, max_edges=8, rotation
     """generate random Regular Polygon Format: dict(radius, rotation, translation, edges)"""
     if not rng:
         rng = np.random.Generator(np.random.PCG64())
-    edges = rng.integers(min_edges, max_edges+1)
+    edges = rng.integers(min_edges, max_edges+1)  # interval open on right side max_edge+1 is not included
     radius = rng.uniform(min_radius, max_radius)
     if translation:
         z_move = 1.0j * rng.uniform(0, max_radius - radius) + random.uniform(0, max_radius - radius)

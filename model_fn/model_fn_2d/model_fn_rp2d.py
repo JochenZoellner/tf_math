@@ -259,7 +259,7 @@ class ModelPolygonClassifier(ModelRegularPolygon):
         softmax_crossentropy_loss = tf.reduce_mean(
             tf.sqrt(tf.compat.v1.losses.softmax_cross_entropy(target_one_hot, predictions['pre_edges'])))
         abs_diff_loss = tf.reduce_mean(
-            tf.compat.v1.losses.absolute_difference(targets['edges'], predictions['pre_edges']))
+            tf.compat.v1.losses.absolute_difference(tf.argmax(target_one_hot, axis=-1), tf.argmax(predictions['pre_edges'], axis=-1)))
 
         accuracy = tf.equal(tf.argmax(target_one_hot, axis=-1), tf.argmax(predictions['pre_edges'], axis=-1))
         accuracy = tf.reduce_mean(tf.cast(accuracy, dtype=tf.float32))
