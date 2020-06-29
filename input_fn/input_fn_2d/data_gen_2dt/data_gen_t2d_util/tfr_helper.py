@@ -61,33 +61,57 @@ def parse_polygon2d(example_proto):
     return decoded_dict
 
 
-def parse_regular_polygon2d(example_proto, batch_size=1000):
-    """
-    intput is:
-        fc (fourier coefficients) [phi,real_part, imag_part] x [phi_0, ..., phi_n] shape: 3 x len(phi_array)
-    target is:
-        radius [1] float32
-        rotation [1] float32
-        translation [2] float32
-        edges [1] int32
-            """
-    feature_description = {'fc': tf.io.FixedLenFeature([], tf.string),
-                           'radius': tf.io.FixedLenFeature([], tf.string),
-                           'rotation': tf.io.FixedLenFeature([], tf.string),
-                           'translation': tf.io.FixedLenFeature([], tf.string),
-                           'edges': tf.io.FixedLenFeature([], tf.string),
-                           'points': tf.io.FixedLenFeature([], tf.string)}
-    # Parse the input tf.Example proto using the dictionary above.
-    raw_dict = tf.io.parse_single_example(example_proto, feature_description)
-    # print(tf.compat.v1.decode_raw(raw_dict["edges"], out_type=tf.int32))
-    decoded_dict = ({"fc": tf.reshape(tf.compat.v1.decode_raw(raw_dict["fc"], out_type=tf.float32), (batch_size, 3, -1))},
-                    {"radius": tf.reshape(tf.compat.v1.decode_raw(raw_dict["radius"], out_type=tf.float32), (batch_size, 1,)),
-                     "rotation": tf.reshape(tf.compat.v1.decode_raw(raw_dict["rotation"], out_type=tf.float32), (batch_size, 1,)),
-                     "translation": tf.reshape(tf.compat.v1.decode_raw(raw_dict["translation"], out_type=tf.float32),(batch_size, 2,)),
-                     "edges": tf.reshape(tf.compat.v1.decode_raw(raw_dict["edges"], out_type=tf.int32), (batch_size, 1,)),
-                     "points": tf.reshape(tf.compat.v1.decode_raw(raw_dict["points"], out_type=tf.float32), (batch_size, -1, 2))})
+class InterfaceRegularPolygon2D(object):
+    def __init__(self, max_edges):
+        super(InterfaceRegularPolygon2D).__init__()
+        self.max_edges = max_edges
+        self._shape_tuple = ({'fc': [3, None]},
+                             {'radius': [1],
+                              'rotation': [1],
+                              'translation': [2],
+                              'edges': [self.max_edges],
+                              'points': [self.max_edges, 2]})
+        self._padding_tuple = ({'fc': tf.constant(0, dtype=tf.float32)},
+                               {'radius': tf.constant(0, dtype=tf.float32),
+                                'rotation': tf.constant(0, dtype=tf.float32),
+                                'translation': tf.constant(0, dtype=tf.float32),
+                                'edges': tf.constant(0, dtype=tf.float32),
+                                'points': tf.constant(0, dtype=tf.float32)})
 
-    return decoded_dict
+    def parse_regular_polygon2d(self, example_proto):
+        """
+        intput is:
+            fc (fourier coefficients) [phi,real_part, imag_part] x [phi_0, ..., phi_n] shape: 3 x len(phi_array)
+        target is:
+            radius [1] float32
+            rotation [1] float32
+            translation [2] float32
+            edges [max_edges] float32
+            points [max_edges, 2] float32
+                """
+        feature_description = {'fc': tf.io.FixedLenFeature([], tf.string),
+                               'radius': tf.io.FixedLenFeature([], tf.string),
+                               'rotation': tf.io.FixedLenFeature([], tf.string),
+                               'translation': tf.io.FixedLenFeature([], tf.string),
+                               'edges': tf.io.FixedLenFeature([], tf.string),
+                               'points': tf.io.FixedLenFeature([], tf.string)}
+        # Parse the input tf.Example proto using the dictionary above.
+        raw_dict = tf.io.parse_single_example(example_proto, feature_description)
+        # print(tf.compat.v1.decode_raw(raw_dict["edges"], out_type=tf.int32))
+        decoded_dict = ({"fc": tf.reshape(tf.compat.v1.decode_raw(raw_dict["fc"], out_type=tf.float32), (3, -1))},
+                        {"radius": tf.reshape(tf.compat.v1.decode_raw(raw_dict["radius"], out_type=tf.float32), (1,)),
+                         "rotation": tf.reshape(tf.compat.v1.decode_raw(raw_dict["rotation"], out_type=tf.float32), (1,)),
+                         "translation": tf.reshape(tf.compat.v1.decode_raw(raw_dict["translation"], out_type=tf.float32), (2,)),
+                         "edges": tf.reshape(tf.compat.v1.decode_raw(raw_dict["edges"], out_type=tf.float32), (self.max_edges,)),
+                         "points": tf.reshape(tf.compat.v1.decode_raw(raw_dict["points"], out_type=tf.float32), (-1, 2))})
+
+        return decoded_dict
+
+    def get_shape_tuple(self):
+        return self._shape_tuple
+
+    def get_padding_tuple(self):
+        return self._padding_tuple
 
 
 class Triangle2dSaver(object):
@@ -233,7 +257,7 @@ class RegularPolygon2dSaver(object):
     @staticmethod
     def serialize_example_pyfunction(fc_arr, points, radius, rotation, translation, edges):
         # assert type(edges) == int, "edges-type is {}, but shoud be int".format(type(edges))
-        edges_array = np.array(edges, dtype=np.int32)
+        edges_array = np.array(edges, dtype=np.float32)
         radius = np.array(radius, dtype=np.float32)
         rotation = np.array(rotation, dtype=np.float32)
         translation = np.array(translation, dtype=np.float32)
@@ -270,21 +294,25 @@ class RegularPolygon2dSaver(object):
                                                                          translation=not self._centered)
 
             # print(points)
-            padded_points = np.pad(points, pad_width=[(0, self.max_edges - points.shape[0]), (0, 0)], mode='edge')
+            padded_points = np.pad(points, pad_width=[(0, self.max_edges - points.shape[0]), (0, 0)], mode='edge').astype(np.float32)
             # for k in padded_points:
             #     print(k)
             point_list.append(padded_points)
             radius_list.append(rre_dict["radius"])
             rotation_list.append(rre_dict["rotation"])
             translation_list.append(rre_dict["translation"])
-            edges_list.append(rre_dict["edges"])
-            # rre_dict_list.append(rre_dict)
 
+            def one_hot(a, num_classes):
+                return np.squeeze(np.eye(num_classes)[a.reshape(-1)])
+
+            edges_list.append(one_hot(rre_dict["edges"]-1, self.max_edges))
+            # rre_dict_list.append(rre_dict)
         batch_points = np.stack(point_list)
         batch_radius = np.stack(radius_list)
         batch_rotation = np.stack(rotation_list)
         batch_translation = np.stack(translation_list)
         batch_edges = np.stack(edges_list)
+
 
         phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(self.phi_arr, self._dtype), axis=0), axis=0)
         bc_dims = [int(self.samples_per_file), 1, len(self.phi_arr)]
@@ -293,15 +321,15 @@ class RegularPolygon2dSaver(object):
         fc_arr = fc_obj(batch_points)
 
         with tf.io.TFRecordWriter(filename) as writer:
-
-            serialized_sample = self.serialize_example_pyfunction(fc_arr=tf.concat((phi_tf_batch, fc_arr), axis=1).numpy(),
-                                                                      points=batch_points,
-                                                                      radius=batch_radius,
-                                                                      rotation=batch_rotation,
-                                                                      translation=batch_translation,
-                                                                      edges=batch_edges)
-            # Serialize to string and write on the file
-            writer.write(serialized_sample)
+            for i in range(self.samples_per_file):
+                serialized_sample = self.serialize_example_pyfunction(fc_arr=tf.concat((phi_tf_batch[0], fc_arr[i]), axis=0).numpy(),
+                                                                      points=batch_points[i],
+                                                                      radius=batch_radius[i],
+                                                                      rotation=batch_rotation[i],
+                                                                      translation=batch_translation[i],
+                                                                      edges=batch_edges[i])
+                # Serialize to string and write on the file
+                writer.write(serialized_sample)
 
         sys.stdout.flush()
 

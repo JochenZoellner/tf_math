@@ -119,9 +119,9 @@ class DataGeneratorBase(object):
         parsed_dataset = raw_dataset.map(self.parse_fn)
         print("Parsed dataset:\n  ", parsed_dataset)
 
-        parsed_dataset_unbatched = parsed_dataset.unbatch()
-        print("unBatched dataset:\n  ", parsed_dataset_unbatched)
-        parsed_dataset_batched = parsed_dataset_unbatched.batch(self._flags.samples_per_file)
+        # parsed_dataset_unbatched = parsed_dataset.unbatch()
+        # print("unBatched dataset:\n  ", parsed_dataset_unbatched)
+        parsed_dataset_batched = parsed_dataset.batch(self._flags.samples_per_file)
         print("Batched dataset:\n  ", parsed_dataset_batched)
 
         counter = 0

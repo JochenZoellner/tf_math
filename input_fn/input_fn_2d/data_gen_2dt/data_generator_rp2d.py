@@ -13,7 +13,7 @@ class DataGeneratorRP2D(DataGeneratorBase):
         self._shape_description_short = "rp"
 
     def get_parse_fn(self):
-        return tfr_helper.parse_regular_polygon2d
+        return tfr_helper.InterfaceRegularPolygon2D(flags.FLAGS.max_edges).parse_regular_polygon2d
 
     def get_saver_obj(self):
         return tfr_helper.RegularPolygon2dSaver(epsilon=flags.FLAGS.epsilon,
@@ -31,7 +31,7 @@ class DataGeneratorRP2D(DataGeneratorBase):
 
         for idx in range(flags.FLAGS.samples_per_file):
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 14))
-            fig.suptitle("{}".format(idx))
+            fig.suptitle("{}: edges: {}".format(idx, targets["edges"][idx]))
             ax1.fill(targets["points"][idx][:, 0], targets["points"][idx][:, 1], "b", alpha=0.5)
             ax1.set_aspect(1.0)
             ax1.set_xlim(-50, 50)
@@ -39,6 +39,7 @@ class DataGeneratorRP2D(DataGeneratorBase):
 
             ax2.plot(inputs["fc"][idx][0], inputs["fc"][idx][1], label="fc_real")
             ax2.plot(inputs["fc"][idx][0], inputs["fc"][idx][2], label="fc_imag")
+
 
             plt.show()
 

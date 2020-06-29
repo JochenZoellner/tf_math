@@ -90,7 +90,7 @@ class ModelBase(object):
         :return:
         """
 
-    def get_loss(self):
+    def loss(self):
         """
         Model specific calculation of the loss
         :return:

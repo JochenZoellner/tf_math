@@ -6,7 +6,7 @@ import tensorflow as tf
 import model_fn.model_fn_2d.model_fn_triangle2d_area as models
 import util.flags as flags
 from input_fn.input_fn_2d.input_fn_generator_triangle2d import InputFn2DT
-from util.misc import get_commit_id, Tee, get_from_keyword
+from util.misc import get_commit_id, get_date_id
 # Model parameter
 # ===============
 flags.define_string('model_type', 'ModelTriangleArea', 'Model Type to use choose from: ModelTriangle')
@@ -41,24 +41,11 @@ class Trainer2DTriangle(TrainerBase):
             self._model.graph_train.summary()
         plot_model(self._model.graph_train, show_shapes=True, show_layer_names=True, expand_nested=True, to_file="network.png")
 
-    def get_date_id(self):
-        with open(flags.FLAGS.train_lists[0], "r") as f_obj:
-            train_filepath = f_obj.readline().strip("\n")
-        assert os.path.isfile(train_filepath)
-        print(train_filepath)
-        dataset_path = os.path.dirname(os.path.dirname(train_filepath))
-        logging.info("dataset_train dir: {}".format(dataset_path))
-        dataset_train_log_filename = glob.glob1(dataset_path, pattern="log_*_train.txt")[0]
-        dataset_train_log_filepath = os.path.join(dataset_path, dataset_train_log_filename)
-        logging.info("dataset_train log filepath: {}".format(dataset_train_log_filepath))
-        date_id = get_from_keyword(dataset_train_log_filepath, keyword="date+id")
-        return date_id
-
 
 if __name__ == '__main__':
     # logging.basicConfig(level=logging.INFO)
     trainer = Trainer2DTriangle()
-    date_id = trainer.get_date_id()
+    date_id = get_date_id(flags.FLAGS.train_lists[0])
     print("date+id: {}".format(date_id))
     if flags.FLAGS.mode == "plot":
         trainer.plot_architecure()

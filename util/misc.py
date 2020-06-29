@@ -103,6 +103,19 @@ def get_from_keyword(filepath, keyword, separator=":", strip=" "):
     return value
 
 
+def get_date_id(dataset_list):
+    with open(dataset_list, "r") as f_obj:
+        train_filepath = f_obj.readline().strip("\n")
+    assert os.path.isfile(train_filepath)
+    dataset_path = os.path.dirname(os.path.dirname(train_filepath))
+    logging.info("dataset_train dir: {}".format(dataset_path))
+    dataset_train_log_filename = glob.glob1(dataset_path, pattern="log_*_train.txt")[0]
+    dataset_train_log_filepath = os.path.join(dataset_path, dataset_train_log_filename)
+    logging.info("dataset_train log filepath: {}".format(dataset_train_log_filepath))
+    date_id = get_from_keyword(dataset_train_log_filepath, keyword="date+id")
+    return date_id
+
+
 if __name__ == "__main__":
     print("test print redirection")
     print("Hello only Console")

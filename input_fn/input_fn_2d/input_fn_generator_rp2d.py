@@ -13,66 +13,47 @@ class InputFnRegularPolygon2D(InputFnBase):
         self._next_batch = None
         self.dataset = None
 
+    def map_and_batch(self, raw_dataset, batch_size):
+        interface = tfr_helper.InterfaceRegularPolygon2D(max_edges=self._flags.max_edges)
+        parsed_dataset = raw_dataset.map(interface.parse_regular_polygon2d)
+        parsed_dataset_batched = parsed_dataset.batch(batch_size)
+        return parsed_dataset_batched
+
     def get_input_fn_train(self):
         # One instance of train dataset to produce infinite many samples
         assert len(self._flags.train_lists) == 1, "exact one train list is needed for this scenario"
         with open(self._flags.train_lists[0], "r") as tr_fobj:
             train_filepath_list = [x.strip("\n") for x in tr_fobj.readlines()]
-
         raw_dataset = tf.data.TFRecordDataset(train_filepath_list)
-        parsed_dataset = raw_dataset.map(tfr_helper.parse_regular_polygon2d)
+        parsed_dataset_batched = self.map_and_batch(raw_dataset, self._flags.train_batch_size)
         # parsed_dataset = parsed_dataset.shuffle(buffer_size=1000)
-        parsed_dataset_batched = parsed_dataset.padded_batch(self._flags.train_batch_size,
-                                                             ({'fc': [3, None]}, {'radius': [1], 'rotation': [1],
-                                                                                  'translation': [2], 'edges': [1]}),
-                                                             ({'fc': tf.constant(0, dtype=tf.float32)},
-                                                              {'radius': tf.constant(0, dtype=tf.float32),
-                                                               'rotation': tf.constant(0, dtype=tf.float32),
-                                                               'translation': tf.constant(0, dtype=tf.float32),
-                                                               'edges': tf.constant(0, dtype=tf.int32)}))
-        self.dataset = parsed_dataset_batched.repeat()
 
+        self.dataset = parsed_dataset_batched.repeat()
         return self.dataset.prefetch(5)
 
     def get_input_fn_val(self):
         with open(self._flags.val_list, "r") as tr_fobj:
             train_filepath_list = [x.strip("\n") for x in tr_fobj.readlines()]
-
         raw_dataset = tf.data.TFRecordDataset(train_filepath_list)
-        parsed_dataset = raw_dataset.map(tfr_helper.parse_regular_polygon2d)
-        self.dataset = parsed_dataset.padded_batch(self._flags.val_batch_size,
-                                                   ({'fc': [3, None]}, {'radius': [1], 'rotation': [1],
-                                                                        'translation': [2], 'edges': [1]}),
-                                                   ({'fc': tf.constant(0, dtype=tf.float32)},
-                                                    {'radius': tf.constant(0, dtype=tf.float32),
-                                                     'rotation': tf.constant(0, dtype=tf.float32),
-                                                     'translation': tf.constant(0, dtype=tf.float32),
-                                                     'edges': tf.constant(0, dtype=tf.int32)}))
 
-        return self.dataset
+        parsed_dataset_batched = self.map_and_batch(raw_dataset, self._flags.val_batch_size)
+
+        return parsed_dataset_batched
 
     def get_input_fn_file(self, filepath, batch_size=1):
         """input of just one file for use in predict mode to guarantee order"""
         assert type(filepath) is str
         raw_dataset = tf.data.TFRecordDataset(filepath)
-        parsed_dataset = raw_dataset.map(tfr_helper.parse_regular_polygon2d)
-        self.dataset = parsed_dataset.padded_batch(batch_size,
-                                                   ({'fc': [3, None]}, {'radius': [1], 'rotation': [1],
-                                                                        'translation': [2], 'edges': [1]}),
-                                                   ({'fc': tf.constant(0, dtype=tf.float32)},
-                                                    {'radius': tf.constant(0, dtype=tf.float32),
-                                                     'rotation': tf.constant(0, dtype=tf.float32),
-                                                     'translation': tf.constant(0, dtype=tf.float32),
-                                                     'edges': tf.constant(0, dtype=tf.int32)}))
-        return self.dataset
+        parsed_dataset_batched = self.map_and_batch(raw_dataset, self._flags.val_batch_size)
+
+        return parsed_dataset_batched
 
 
 if __name__ == "__main__":
+    print("run input_fn_generator_regular_polygon debugging...")
     import util.flags as flags
-
     import trainer.trainer_base  # do not remove, needed for flag imports
 
-    print("run input_fn_generator_regular_polygon debugging...")
 
     # gen = Generator2dt(flags.FLAGS)
     # for i in range(10):
