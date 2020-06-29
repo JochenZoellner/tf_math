@@ -72,6 +72,10 @@ if __name__ == "__main__":
     for run in array_list:
         plt.plot(run[0], run[1], "r.", markersize=2)
     out_folder = os.path.join(*os.path.split(flags.FLAGS.series_dirs[0])[:-1])
+    out_folder = os.path.join(out_folder, "series_res")
+    if not os.path.isdir(out_folder):
+        os.makedirs(out_folder)
+
     logger.info("output folder: {}".format(out_folder))
     plt.grid()
     plt.ylabel("relativ error [%]")
