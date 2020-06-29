@@ -3,10 +3,11 @@ import tensorflow as tf
 
 class ScatterPolygon2D(tf.keras.layers.Layer):
     def __init__(self, fc_tensor, points_tf=tf.constant([[0, 0], [0, 1], [1, 0]]),
-                 epsilon=tf.constant(0.0001), with_batch_dim=True, dtype=tf.float64):
+                 epsilon=tf.constant(0.0001), with_batch_dim=True, dtype=tf.float64, allow_variable_edges=False):
         tf.keras.layers.Layer.__init__(self, trainable=False)
         self._with_batch_dim_tf = with_batch_dim
         self.mydtype = dtype
+        self.allow_variable_edges = allow_variable_edges
         if self.mydtype == tf.float64:
             self.complex_dtype = tf.complex128
         elif self.mydtype == tf.float32:
@@ -67,6 +68,14 @@ class ScatterPolygon2D(tf.keras.layers.Layer):
                 j_tf * self.complex_dot(p0_tf, self._q_tf) + c_tfc)
             res_array_tf = tf.where(tf.math.abs(self.complex_dot(p0p1_tf, self._q_tf)) >= self.epsilon_tf, case1_array_tf, case2_array_tf)
 
+        # if p0_tf == p1_tf return zero, needed for variable edge polygons
+        p0p1_dist = tf.abs(tf.reduce_sum(p0p1_tf, axis=-1))
+        epsilon2_array = tf.broadcast_to(tf.square(self.epsilon_tf), tf.shape(p0p1_dist))
+        condition_zero = tf.transpose(tf.broadcast_to(tf.math.less(p0p1_dist, epsilon2_array), tf.reverse(tf.shape(res_array_tf), axis=[0])))
+        if not self.allow_variable_edges and tf.reduce_any(condition_zero):
+            tf.print(condition_zero)
+            tf.print("identical points detected")
+        res_array_tf = tf.where(condition_zero, tf.broadcast_to(tf.constant(0.0, dtype=self.complex_dtype), tf.shape(res_array_tf)), res_array_tf)
         return res_array_tf
 
     def fc_of_phi(self):

@@ -14,6 +14,8 @@ logger = logging.getLogger("tf_polygone_2d_helper")
 flags.define_list('series_dirs', str, 'space seperated list of training sample lists',
                   "names of the training sample lists to use. You can provide a single list as well. ",
                   [])
+flags.define_string('parameter_name', "min_fov", "set variable of series, like 'min_fov', 'max_fov")
+flags.define_string('parameter_unit', "°", "set variable of series, like 'min_fov', 'max_fov")
 
 
 def find_result_files(series_dir, pattern="best_loss.json", not_pattern="fritz"):
@@ -79,8 +81,8 @@ if __name__ == "__main__":
     logger.info("output folder: {}".format(out_folder))
     plt.grid()
     plt.ylabel("relativ error [%]")
-    plt.xlabel("min_fov [°]")
-    plt.savefig(os.path.join(out_folder, "plot_error_by_min_fov.pdf"))
+    plt.xlabel("{} [{}]".format(flags.FLAGS.parameter_name,flags.FLAGS.parameter_unit))
+    plt.savefig(os.path.join(out_folder, "plot_error_by_{}}.pdf".format(flags.FLAGS.parameter_name)))
 
 
 

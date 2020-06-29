@@ -209,19 +209,22 @@ class Polygon2dSaver(object):
 
 
 class RegularPolygon2dSaver(object):
-    def __init__(self, epsilon, phi_arr, samples_per_file, centered=False, max_edges=8, max_size=50, dtype=tf.float32):
+    def __init__(self, epsilon, phi_arr, samples_per_file, centered=False, max_edges=8, min_edges=3, max_size=50, dtype=tf.float32):
         assert samples_per_file > 0
         self.epsilon = epsilon
+        self.epsilon_tf = tf.constant(epsilon, dtype=dtype)
         self._centered = centered
         self.phi_arr = phi_arr
         self.dphi = np.abs(phi_arr[1] - phi_arr[0])
         self.samples_per_file = samples_per_file
         self.max_edges = max_edges
+        self.min_edges = min_edges
         self.max_size = max_size
         self._dtype = dtype
         print("  init regular polygon2d-saver with:")
         print("  epsilon: {}".format(self.epsilon))
         print("  max edges of polygon: {}".format(self.max_edges))
+        print("  min edges of polygon: {}".format(self.min_edges))
         print("  max radius of polygon: {}".format(self.max_size))
         print("  len phi_arr: {}".format(len(self.phi_arr)))
         print("  dphi: {}".format(phi_arr[1] - phi_arr[0]))
@@ -244,7 +247,7 @@ class RegularPolygon2dSaver(object):
         # print(edges_array)
         feature_ = {'fc': _bytes_feature(tf.compat.as_bytes(fc_arr.tostring())),
                     'radius': _bytes_feature(tf.compat.as_bytes(radius.tostring())),
-                    'points':_bytes_feature(tf.compat.as_bytes(points.tostring())),
+                    'points': _bytes_feature(tf.compat.as_bytes(points.tostring())),
                     'rotation': _bytes_feature(tf.compat.as_bytes(rotation.tostring())),
                     'translation': _bytes_feature(tf.compat.as_bytes(translation.tostring())),
                     'edges': _bytes_feature(tf.compat.as_bytes(edges_array.tostring()))}
@@ -252,7 +255,7 @@ class RegularPolygon2dSaver(object):
         return tf.train.Example(features=tf.train.Features(feature=feature_)).SerializeToString()
 
     def save_file_tf(self, filename):
-
+        np.set_printoptions(precision=2, suppress=True)
         rre_dict = dict()
         point_list = []
         radius_list = []
@@ -263,9 +266,14 @@ class RegularPolygon2dSaver(object):
         for i in range(self.samples_per_file):
             points, rre_dict = polygon2d.generate_target_regular_polygon(max_edges=self.max_edges,
                                                                          max_radius=self.max_size,
-                                                                         min_edges=self.max_edges,
+                                                                         min_edges=self.min_edges,
                                                                          translation=not self._centered)
-            point_list.append(points)
+
+            # print(points)
+            padded_points = np.pad(points, pad_width=[(0, self.max_edges - points.shape[0]), (0, 0)], mode='edge')
+            # for k in padded_points:
+            #     print(k)
+            point_list.append(padded_points)
             radius_list.append(rre_dict["radius"])
             rotation_list.append(rre_dict["rotation"])
             translation_list.append(rre_dict["translation"])
@@ -281,7 +289,7 @@ class RegularPolygon2dSaver(object):
         phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(self.phi_arr, self._dtype), axis=0), axis=0)
         bc_dims = [int(self.samples_per_file), 1, len(self.phi_arr)]
         phi_tf_batch = tf.broadcast_to(phi_tf, bc_dims)
-        fc_obj = c_layers.ScatterPolygon2D(phi_tf, dtype=self._dtype, with_batch_dim=True)
+        fc_obj = c_layers.ScatterPolygon2D(phi_tf, dtype=self._dtype, with_batch_dim=True, epsilon=self.epsilon_tf, allow_variable_edges=True)
         fc_arr = fc_obj(batch_points)
 
         with tf.io.TFRecordWriter(filename) as writer:

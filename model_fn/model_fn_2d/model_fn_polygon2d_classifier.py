@@ -26,32 +26,35 @@ class ModelPolygonClassifier(ModelBase):
         return 'edges'
 
     def get_predictions(self):
-        return self._graph_out['e_pred']
+        return self._graph_out['pre_edges']
 
     def info(self):
         self.get_graph().print_params()
 
-    def get_loss(self):
-        loss = 0.0
-        if 'softmax_crossentropy' == self._flags.loss_mode:
-            loss += tf.sqrt(tf.compat.v1.losses.softmax_cross_entropy(
-                tf.one_hot(tf.squeeze(self._targets['edges'], axis=-1) - 3, depth=4), self._graph_out['e_pred']))
-        elif "abs_diff" == self._flags.loss_mode:
-            loss += tf.compat.v1.losses.absolute_difference(self._targets['edges'], self._graph_out['e_pred'])
-        else:
-            logging.error("no valid loss-mode in loss_params")
-            raise AttributeError
+    def loss(self, predictions, targets):
+        loss = tf.constant(0.0, dtype=tf.float32)
+        target_one_hot = tf.one_hot(tf.squeeze(targets['edges'], axis=-1) - 3, depth=4)
+        softmax_crossentropy_loss = tf.reduce_mean(tf.sqrt(tf.compat.v1.losses.softmax_cross_entropy(target_one_hot, predictions['edges_pred'])))
+        abs_diff_loss = tf.reduce_mean(tf.compat.v1.losses.absolute_difference(targets['edges'], predictions['edges_pred']))
+
+        accuracy = tf.equal(tf.argmax(target_one_hot, 1), tf.argmax(tf.nn.softmax(predictions['edges_pred'], axis=1)))
+        tf.print(accuracy)
+        if 'softmax_crossentropy' in self._flags.loss_mode:
+            loss += softmax_crossentropy_loss
+        if "abs_diff" in self._flags.loss_mode:
+            loss += abs_diff_loss
+
         loss = tf.reduce_mean(loss)
         return loss
 
-    def export_helper(self):
-        for train_list in self._params['flags'].train_lists:
-            data_id = os.path.basename(train_list)[:-8]
-            shutil.copy(os.path.join("data/synthetic_data", data_id, "log_{}_train.txt".format(data_id)),
-                        os.path.join(self._params['flags'].checkpoint_dir, "export"))
-        data_id = os.path.basename(self._params['flags'].val_list)[:-8]
-        shutil.copy(os.path.join("data/synthetic_data", data_id, "log_{}_val.txt".format(data_id)),
-                    os.path.join(self._params['flags'].checkpoint_dir, "export"))
+    # def export_helper(self):
+    #     for train_list in self._params['flags'].train_lists:
+    #         data_id = os.path.basename(train_list)[:-8]
+    #         shutil.copy(os.path.join("data/synthetic_data", data_id, "log_{}_train.txt".format(data_id)),
+    #                     os.path.join(self._params['flags'].checkpoint_dir, "export"))
+    #     data_id = os.path.basename(self._params['flags'].val_list)[:-8]
+    #     shutil.copy(os.path.join("data/synthetic_data", data_id, "log_{}_val.txt".format(data_id)),
+    #                 os.path.join(self._params['flags'].checkpoint_dir, "export"))
 
     def print_evaluate(self, output_dict, target_dict):
         with tf.compat.v1.Session().as_default():

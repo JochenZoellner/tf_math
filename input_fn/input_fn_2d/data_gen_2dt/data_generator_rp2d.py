@@ -3,12 +3,12 @@ from input_fn.data_generator_base import DataGeneratorBase
 import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tfr_helper as tfr_helper
 import util.flags as flags
 
-flags.define_boolean("sorted", False, "sort target point by x coordinate")
+flags.define_integer("min_edges", 3, "set number minimal edges, >=3")
+flags.define_integer("max_edges", 6, "set number minimal edges, >=3")
 
-
-class DataGeneratorRP(DataGeneratorBase):
+class DataGeneratorRP2D(DataGeneratorBase):
     def __init__(self):
-        super(DataGeneratorRP, self).__init__()
+        super(DataGeneratorRP2D, self).__init__()
         self._shape_description = "Regular Polygon 2D"
         self._shape_description_short = "rp"
 
@@ -19,7 +19,9 @@ class DataGeneratorRP(DataGeneratorBase):
         return tfr_helper.RegularPolygon2dSaver(epsilon=flags.FLAGS.epsilon,
                                                 phi_arr=tf.constant(self._phi_arr, self._dtype),
                                                 samples_per_file=flags.FLAGS.samples_per_file,
-                                                centered=flags.FLAGS.centered)
+                                                centered=flags.FLAGS.centered,
+                                                min_edges=flags.FLAGS.min_edges,
+                                                max_edges=flags.FLAGS.max_edges)
 
     def debug(self):
         print("Debuggin in data_generator_rp")
@@ -40,15 +42,8 @@ class DataGeneratorRP(DataGeneratorBase):
 
             plt.show()
 
-
-
-
-
-
-
-
 if __name__ == "__main__":
-    data_generator = DataGeneratorRP()
+    data_generator = DataGeneratorRP2D()
     data_generator.run()
     if flags.FLAGS.mode == "debug":
         data_generator.debug()
