@@ -99,7 +99,7 @@ def plot_zero_crossing(first_zero_crossing, result_dir):
     plt.figure(figsize=(8, 4))
     plt.hist(fzc_arr, bins=1000)
     plt.xlim((0, 90))
-    plt.xlabel("A")
+    plt.xlabel("fov/2 [°]")
     labels = [item.get_text() for item in plt.gca().get_yticklabels()]
     empty_string_labels = [""] * len(labels)
     # plt.gca().set_yticklabels(empty_string_labels)
