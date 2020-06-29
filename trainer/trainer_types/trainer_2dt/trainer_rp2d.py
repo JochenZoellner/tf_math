@@ -31,7 +31,7 @@ class TrainerRegularPolygon2D(TrainerBase):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    # logging.basicConfig(level=logging.INFO)
     trainer = TrainerRegularPolygon2D()
     # date_id = get_date_id(flags.FLAGS.train_lists[0])
     # print("date+id: {}".format(date_id))

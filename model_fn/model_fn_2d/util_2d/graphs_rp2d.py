@@ -173,6 +173,11 @@ class GraphConv1MultiFF(Graph2D):
         self.graph_params["nhidden_max_edges"] = 6
         self.graph_params["pre_activation"] = None
 
+        self.graph_params["pre_radius"] = True
+        self.graph_params["pre_rotation"] = True
+        self.graph_params["pre_translation"] = True
+        self.graph_params["pre_edges"] = True
+
 
         self.graph_params = update_params(self.graph_params, self._flags.graph_params, "graph")
 
@@ -190,10 +195,18 @@ class GraphConv1MultiFF(Graph2D):
             name = "ff_{}".format(layer_index + 1)
             self._tracked_layers[name] = tf.keras.layers.Dense(n_hidden, activation=tf.nn.leaky_relu, name=name)
 
-        self._tracked_layers["radius"] = tf.keras.layers.Dense(1, activation=None, name="radius")
-        self._tracked_layers["rotation"] = tf.keras.layers.Dense(1, activation=None, name="rotation")
-        self._tracked_layers["translation"] = tf.keras.layers.Dense(1, activation=None, name="translation")
-        self._tracked_layers["edges"] = tf.keras.layers.Dense(self._flags.max_edges, activation=None, name="edges")
+        if self.graph_params["pre_radius"]:
+            self._tracked_layers["radius"] = tf.keras.layers.Dense(1, activation=None, name="radius")
+
+        if self.graph_params["pre_rotation"]:
+            self._tracked_layers["rotation"] = tf.keras.layers.Dense(1, activation=None, name="rotation")
+
+        if self.graph_params["pre_translation"]:
+            self._tracked_layers["translation"] = tf.keras.layers.Dense(1, activation=None, name="translation")
+
+        if self.graph_params["pre_edges"]:
+            self._tracked_layers["edges"] = tf.keras.layers.Dense(self._flags.max_edges, activation=None, name="edges")
+
 
     @tf.function
     def call(self, inputs, training=False, build=None):
@@ -226,16 +239,20 @@ class GraphConv1MultiFF(Graph2D):
 
         self._graph_out = {"fc": inputs["fc"]}
 
-        pre_radius = self._tracked_layers["radius"](ff_in)
-        self._graph_out["pre_radius"] = pre_radius
+        if self.graph_params["pre_radius"]:
+            pre_radius = self._tracked_layers["radius"](ff_in)
+            self._graph_out["pre_radius"] = pre_radius
 
-        pre_rotation = self._tracked_layers["rotation"](ff_in)
-        self._graph_out["pre_rotation"] = pre_rotation
+        if self.graph_params["pre_rotation"]:
+            pre_rotation = self._tracked_layers["rotation"](ff_in)
+            self._graph_out["pre_rotation"] = pre_rotation
 
-        pre_translation = self._tracked_layers["translation"](ff_in)
-        self._graph_out["pre_translation"] = pre_translation
+        if self.graph_params["pre_translation"]:
+            pre_translation = self._tracked_layers["translation"](ff_in)
+            self._graph_out["pre_translation"] = pre_translation
 
-        pre_edges = self._tracked_layers["edges"](ff_in)
-        self._graph_out["pre_edges"] = pre_edges
+        if self.graph_params["pre_edges"]:
+            pre_edges = self._tracked_layers["edges"](ff_in)
+            self._graph_out["pre_edges"] = pre_edges
 
         return self._graph_out

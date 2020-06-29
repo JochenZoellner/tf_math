@@ -15,6 +15,7 @@ from model_fn.model_fn_base import ModelBase
 class ModelRegularPolygon(ModelBase):
     def __init__(self, params):
         super(ModelRegularPolygon, self).__init__(params)
+        self.mydtype = tf.float32
         self._flags = self._params['flags']
         self._targets = None
         self._point_dist = None
@@ -43,7 +44,7 @@ class ModelRegularPolygon(ModelBase):
     def info(self):
         self.get_graph().print_params()
 
-    def loss(self):
+    def loss(self, predictions, targets):
         # self._targets['points'] = tf.Print(self._targets['points'], [self._targets['points']])
         # loss0 = tf.losses.absolute_difference(self._targets['points'], self._graph_out['p_pred'])
         # print("params train batch size", self._params["flags"].train_batch_size)
@@ -242,6 +243,13 @@ class ModelPolygonClassifier(ModelRegularPolygon):
         self._point_dist = None
         self._summary_object = {"tgt_points": [], "pre_points": [], "ordered_best": [], "unordered_best": []}
 
+        self.metrics["train"]["accuracy"] = tf.keras.metrics.Mean("accuracy", self.mydtype)
+        self.metrics["eval"]["accuracy"] = tf.keras.metrics.Mean("accuracy", self.mydtype)
+        self.metrics["train"]["loss_softmax_crossenropy"] = tf.keras.metrics.Mean("loss_softmax_crossenropy", self.mydtype)
+        self.metrics["eval"]["loss_softmax_crossenropy"] = tf.keras.metrics.Mean("loss_softmax_crossenropy", self.mydtype)
+        self.metrics["train"]["loss_abs_diff"] = tf.keras.metrics.Mean("loss_abs_diff", self.mydtype)
+        self.metrics["eval"]["loss_abs_diff"] = tf.keras.metrics.Mean("loss_abs_diff", self.mydtype)
+
     def info(self):
         self.get_graph().print_params()
 
@@ -254,11 +262,16 @@ class ModelPolygonClassifier(ModelRegularPolygon):
             tf.compat.v1.losses.absolute_difference(targets['edges'], predictions['pre_edges']))
 
         accuracy = tf.equal(tf.argmax(target_one_hot, axis=-1), tf.argmax(predictions['pre_edges'], axis=-1))
-        tf.print(tf.reduce_mean(tf.cast(accuracy, dtype=tf.float32)))
+        accuracy = tf.reduce_mean(tf.cast(accuracy, dtype=tf.float32))
+        # tf.print(accuracy)
         if 'softmax_crossentropy' in self._flags.loss_mode:
             loss += softmax_crossentropy_loss
         if "abs_diff" in self._flags.loss_mode:
             loss += abs_diff_loss
+
+        self.metrics[self._mode]["accuracy"](accuracy)
+        self.metrics[self._mode]["loss_softmax_crossenropy"](softmax_crossentropy_loss)
+        self.metrics[self._mode]["loss_abs_diff"](abs_diff_loss)
 
         loss = tf.reduce_mean(loss)
         return loss

@@ -80,9 +80,9 @@ if __name__ == "__main__":
 
     logger.info("output folder: {}".format(out_folder))
     plt.grid()
-    plt.ylabel("relativ error [%]")
+    plt.ylabel("relative error [%]")
     plt.xlabel("{} [{}]".format(flags.FLAGS.parameter_name,flags.FLAGS.parameter_unit))
-    plt.savefig(os.path.join(out_folder, "plot_error_by_{}}.pdf".format(flags.FLAGS.parameter_name)))
+    plt.savefig(os.path.join(out_folder, "plot_error_by_{}.pdf".format(flags.FLAGS.parameter_name)))
 
 
 
