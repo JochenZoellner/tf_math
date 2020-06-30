@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # v0.1
-set -xe
+set -e
 ID=$1
 shift
 DATASET=$1
