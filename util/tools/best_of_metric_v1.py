@@ -7,7 +7,7 @@ from tensorflow.python.summary.summary_iterator import summary_iterator
 import util.flags as flags
 
 flags.define_string('checkpoint_dir', '', 'Checkpoint to save model information in.')
-flags.define_string("find_max", False, "if the best value is max like in accuracy")
+flags.define_boolean("find_max", False, "if the best value is max like in accuracy")
 flags.define_string("metric", "loss", "metric name")
 
 def get_metric_from_event_file(file_path, metric="loss", dtype=np.float32):
