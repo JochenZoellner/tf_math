@@ -27,6 +27,7 @@ PARAMS="
     --graph_params pre_radius=False pre_rotation=False pre_translation=False \
     --max_edges 12 \
     --loss_mode softmax_crossentropy \
+    --print_to both \
     --gpu_devices ${GPU}
 "
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # v0.1
-set -xe
+set -e
 DATASET=$1
 shift
 
@@ -17,7 +17,7 @@ CUDA_VISIBLE_DEVICES="" TS_SOCKET="cpu" PYTHONPATH=/home/$USER/devel/projects/pr
 PARAMS="
 --print_to file \
 --mode "train" \
---data_id rp2d_3to7edges \
+--data_id ${DATASET} \
 --centered False \
 --min_edges 3 \
 --max_edges 4 \
