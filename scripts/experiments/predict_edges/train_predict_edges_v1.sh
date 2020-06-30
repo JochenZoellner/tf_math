@@ -30,6 +30,6 @@ PARAMS="
     --gpu_devices ${GPU}
 "
 
-    CUDA_VISIBLE_DEVICES="" TS_SOCKET=${QUEUE} PYTHONPATH=/home/$USER/devel/projects/projectneiss2d/tf_neiss:$PYTHONPATH tsp  python -u ./tf_neiss/trainer/trainer_types/trainer_2dt/trainer_rp2s.py ${PARAMS} "$@"
+    CUDA_VISIBLE_DEVICES="" TS_SOCKET=${QUEUE} PYTHONPATH=/home/$USER/devel/projects/projectneiss2d/tf_neiss:$PYTHONPATH tsp  python -u ./tf_neiss/trainer/trainer_types/trainer_2dt/trainer_rp2d.py ${PARAMS} "$@"
 
 # example call: $> sh ./tf_neiss/scripts/experiments/predict_edges/train_predict_edges_v1.sh test_A rp2d_3to4edge 0 --max_edges 4
