@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -xe
-DATASET="t2d_min_fov_exp"
+DATASET="t2d_fov_exp"
 
 PARAMS="\
     --print_to both \

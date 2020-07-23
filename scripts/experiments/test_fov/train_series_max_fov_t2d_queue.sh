@@ -8,7 +8,7 @@ QUEUE="gpu${GPU}"
 EPOCH=40
 set -xe
 
-DATASET="t2d_min_fov_exp"
+DATASET="t2d_fov_exp"
 DATALEN=312
 mkdir -p models/dataset_${DATASET}/${ID_SERIES}
 for parameter in 5.0 10.0 12.5 15.0 17.5 20.0 22.5 25.0 26.0 27.0 27.5 28.0 29.0 30.0 31.0 32.0 32.5 33.0 34.0 35.0 \
@@ -44,4 +44,8 @@ do
 #      "
 #    CUDA_VISIBLE_DEVICES="" PYTHONPATH=/home/$USER/devel/projects/projectneiss2d/tf_neiss:$PYTHONPATH python -u ./tf_neiss/trainer/lav_types/lav_triangle2d.py ${LAV_PARAMS} >> "models/dataset_${DATASET}/${ID}/lav-${ID}.log" 2>&1
 done
-# example call: $> sh ./tf_bic/train_bic_queue.sh
+# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/train_series_max_fov_t2d_queue.sh max_fov_series_0 0
+# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/train_series_max_fov_t2d_queue.sh max_fov_series_1 1
+# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/train_series_max_fov_t2d_queue.sh max_fov_series_2 0
+# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/train_series_max_fov_t2d_queue.sh max_fov_series_3 1
+# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/train_series_max_fov_t2d_queue.sh max_fov_series_4 0
