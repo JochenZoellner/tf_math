@@ -7,6 +7,7 @@ import util.flags as flags
 flags.define_integer("min_edges", 3, "set number minimal edges, >=3")
 flags.define_integer("max_edges", 6, "set number minimal edges, >=3")
 
+
 class DataGeneratorAP2D(DataGeneratorBase):
     def __init__(self):
         super(DataGeneratorAP2D, self).__init__()
