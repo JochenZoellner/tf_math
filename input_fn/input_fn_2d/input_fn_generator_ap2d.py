@@ -1,25 +1,20 @@
-import tensorflow as tf
-
 import input_fn.input_fn_2d.data_gen_2dt.util_2d.interface as interface
-from input_fn.input_fn_2d import input_fn_generator_2d
+from input_fn.input_fn_2d.input_fn_generator_2d import InputFn2D
 
 
-class InputFnRegularPolygon2D(input_fn_generator_2d):
-    """Input Function Generator for regular polygon 2d problems, dataset returns a dict..."""
-
+class InputFnArbirtraryPolygon2D(InputFn2D):
+    """Input Function Generator for polygon 2d problems, dataset returns a dict..."""
     def __init__(self, flags_):
-        super(InputFnRegularPolygon2D, self).__init__(flags_)
-        self.iterator = None
-        self._next_batch = None
-        self.dataset = None
-        self._interface_obj = interface.InterfaceRegularPolygon2D(max_edges=self._flags.max_edges)
+        super(InputFnArbirtraryPolygon2D, self).__init__(flags_)
+        self._interface_obj = interface.InterfaceArbitraryPolygon2D(max_edges=self._flags.max_edges)
 
 
 if __name__ == "__main__":
-    print("run input_fn_generator_regular_polygon debugging...")
     import util.flags as flags
+
     import trainer.trainer_base  # do not remove, needed for flag imports
 
+    print("run input_fn_generator_2dtriangle debugging...")
 
     # gen = Generator2dt(flags.FLAGS)
     # for i in range(10):

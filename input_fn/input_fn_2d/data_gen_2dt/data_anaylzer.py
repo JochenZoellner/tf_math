@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import tensorflow as tf
-import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tfr_helper as tfr_helper
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.saver as tfr_helper
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 

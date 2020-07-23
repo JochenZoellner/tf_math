@@ -13,7 +13,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""  # hide all gpu's until needed
 import tensorflow as tf
 
 import util.flags as flags
-import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tfr_helper as tfr_helper
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.saver as tfr_helper
 import model_fn.util_model_fn.custom_layers as c_layer
 
 from util.misc import get_commit_id, Tee

@@ -1,0 +1,171 @@
+import logging
+
+import numpy as np
+import tensorflow as tf
+
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.convert as convert
+
+logger = logging.getLogger("util_2d/misc.py")
+
+
+def rotate_triangle(p1, p2, p3, phi):
+    p_list = np.zeros((3, 2))
+    for index, p in enumerate([p1, p2, p3]):
+        p_list[index, 0] = p[0] * np.cos(phi) + p[1] * np.sin(phi)
+        p_list[index, 1] = -1.0 * p[0] * np.sin(phi) + p[1] * np.cos(phi)
+    return p_list[0], p_list[1], p_list[2]
+
+
+def center_triangle(p1, p2, p3):
+    x_c = (p1[0] + p2[0] + p3[0]) / 3.0
+    y_c = (p1[1] + p2[1] + p3[1]) / 3.0
+    p_list = np.zeros((3, 2))
+    for index, p in enumerate([p1, p2, p3]):
+        p_list[index, 0] = p[0] - x_c
+        p_list[index, 1] = p[1] - y_c
+
+    return p_list[0], p_list[1], p_list[2]
+
+
+def translate_triangle(p1, p2, p3, delta_x_y):
+    p_list = np.zeros((3, 2))
+    for index, p in enumerate([p1, p2, p3]):
+        p_list[index, 0] = p[0] + delta_x_y[0]
+        p_list[index, 1] = p[1] + delta_x_y[1]
+    return p_list[0], p_list[1], p_list[2]
+
+
+def get_spin(point_list):
+    """sums all angles of a point_list/array (simple linear ring).
+    If positive the direction is counter-clockwise and mathematical positive"""
+    if type(point_list) == list:
+        arr = convert.tuples_to_array(point_list)
+    else:
+        arr = point_list
+    direction = 0.0
+    # print(point_list)
+    for index in range(len(point_list)):
+        p0 = np.array(list(point_list[index - 2]))
+        p1 = np.array(list(point_list[index - 1]))
+        p2 = np.array(list(point_list[index]))
+        s1 = p1 - p0
+        s1_norm = s1 / np.sqrt(np.dot(s1, s1))
+        s2 = p2 - p1
+        s2_norm = s2 / np.sqrt(np.dot(s2, s2))
+        s1_bar = (-s1_norm[1], s1_norm[0])
+        direction += np.dot(s1_bar, s2_norm)
+    # print(direction)
+    return direction
+
+
+def angle_between(p1, p2):
+    ang1 = -np.arctan2(*p1[::-1])
+    ang2 = np.arctan2(*p2[::-1])
+    return -1 * (np.rad2deg((ang1 - ang2) % (2 * np.pi)) - 180.0)
+
+
+def py_ang(v1, v2):
+    """ Returns the angle in DEGREE between vectors 'v1' and 'v2'
+      result is given in DEG!"""
+    cosang = np.dot(v1, v2)
+
+    # print("cosang", cosang)
+    sinang = np.linalg.norm(np.cross(v1, v2)) * np.sign(cosang)
+    # print("sinagn", sinang)
+
+    res = np.arctan2(sinang, cosang * np.sign(cosang)) / np.pi * 180
+    # print(res)
+    return res
+
+
+def get_orientation_batched(batched_point_squence, dtype=tf.float32):
+    """[batch, point, coordinate]
+        [None, None, 2]
+    eg. 12 samples of triangle in 2D ->[12,3,2]
+    -find point with max X, (
+    :raises ValueError if 3 neighbouring points have the same max x-coordinate"""
+    # find max x-coordinate
+    batched_point_squence = tf.cast(batched_point_squence, dtype)
+    max_x_arg = tf.argmax(batched_point_squence[:, :, 0], axis=1)
+    # construct gather indices for 3 Points with max x-Point centered
+    ranged = tf.range(max_x_arg.shape[0], dtype=tf.int64)
+    max_x_minus = (max_x_arg - 1) % batched_point_squence.shape[1]
+    max_x = (max_x_arg) % batched_point_squence.shape[1]
+    max_x_plus = (max_x_arg + 1) % batched_point_squence.shape[1]
+    indices = tf.stack((ranged, max_x), axis=1)
+    indices_minus = tf.stack((ranged, max_x_minus), axis=1)
+    indices_plus = tf.stack((ranged, max_x_plus), axis=1)
+
+    # construct 3 Points with max x-Point centered
+    # print("indices_minus",indices_minus)
+    Pm = tf.gather_nd(params=batched_point_squence, indices=indices_minus)
+    P = tf.gather_nd(params=batched_point_squence, indices=indices)
+    Pp = tf.gather_nd(params=batched_point_squence, indices=indices_plus)
+
+    # calc scalar product of 'Pm->P'-normal and 'P->Pp'
+    cross = tf.constant([[0.0, -1.0], [1.0, 0.0]], dtype)
+    PmP = P - Pm
+    PPp = Pp - P
+    PPm_cross = tf.matmul(PmP, cross)
+    orientation = tf.einsum("...i,...i->...", PPm_cross, PPp)
+    # check if orientation contains zero which means adjacent 3 points on max x-straight
+    # assertion = tf.assert_greater(tf.abs(orientation), tf.constant(0.0, dtype), message="get orientation failed, probably 3 points on a straight")
+    # with tf.control_dependencies([assertion]):
+    return orientation
+
+
+@tf.function
+def make_positiv_orientation(batched_point_squence, dtype=tf.float32):
+    orientation = get_orientation_batched(batched_point_squence, dtype=dtype)
+    orientation_bool_vec = orientation > tf.constant([0.0], dtype)
+    orientation_arr = tf.broadcast_to(tf.expand_dims(tf.expand_dims(orientation_bool_vec, axis=-1), axis=-1),
+                                      batched_point_squence.shape)
+    batched_point_squence = tf.where(orientation_arr, tf.reverse(batched_point_squence, axis=[1]),
+                                     batched_point_squence)
+    return batched_point_squence
+
+
+def get_area_of_triangle(points, smallareawarning=10.0):
+    """points is tensor with shape [3x2]"""
+    logger.debug("get_area_of_triangle...")
+    assert tf.is_tensor(points)
+    distances = points - tf.roll(points, shift=-1, axis=-2)
+    logger.debug("distances: {}".format(distances))
+    euclid_distances = tf.math.reduce_euclidean_norm(distances, axis=-1)
+    logger.debug("euclidean_norm_distances: {}".format(euclid_distances))
+    s = 0.5 * tf.reduce_sum(euclid_distances, axis=-1)
+    logger.debug("s: {}".format(s))
+    red_prod = tf.reduce_prod(
+        tf.broadcast_to(s, tf.shape(tf.transpose(euclid_distances))) - tf.transpose(euclid_distances), axis=0)
+    area = tf.sqrt(s * red_prod)
+    logger.debug("area: {}".format(area))
+    if tf.executing_eagerly():
+        if np.min(area) < smallareawarning:
+            logger.warning("small area detected!")
+
+            if tf.rank(area) >= 1:
+                logger.warning("sorted areas: {}".format(np.sort(area)))
+            else:
+                logger.warning("sorted areas: {}".format(area))
+    else:
+        if tf.reduce_min(area) < smallareawarning:
+            logger.warning("small area detected!")
+    logger.debug("get_area_of_triangle... Done.")
+    return area
+
+
+def get_min_aspect_ratio(points):
+    assert type(points) == np.ndarray
+    assert points.shape == (3, 2)
+    distances = points - np.roll(points, axis=0, shift=1)
+    abs_distances = np.sqrt(np.sum(np.square(distances), axis=1))
+    s = 0.5 * np.sum(abs_distances)
+    area = np.sqrt(s * np.prod(s - abs_distances))
+    h_c = 2 / np.max(abs_distances) * area
+    logger.debug("get_min_aspect_ratio:")
+    logger.debug("points {}".format(points))
+    logger.debug("distances: {}".format(abs_distances))
+    logger.debug("A: {}".format(area))
+    logger.debug("H_min: {}".format(h_c))
+    logger.info("min_aspect_ratio: {}".format(h_c))
+    return h_c / np.max(abs_distances)

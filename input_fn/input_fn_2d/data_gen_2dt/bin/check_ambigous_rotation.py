@@ -1,4 +1,5 @@
-import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as triangle_2d_helper
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.misc as misc
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.scatter as scatter
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -50,10 +51,12 @@ if __name__ == "__main__":
     f_of_rot = np.empty((len(alpha_rad_array), len(phi_array)), dtype=np.complex256)
 
     for alpha_idx, alpha in enumerate(alpha_rad_array):
-        p1_, p2_, p3_ = triangle_2d_helper.rotate_triangle(p1, p2, p3, alpha)
+        p1_, p2_, p3_ = misc.rotate_triangle(p1, p2, p3, alpha)
         # p1_, p2_, p3_ = triangle_2d_helper.cent_triangle(p1_, p2_, p3_)
-        fcalc = triangle_2d_helper.Fcalculator(p1_, p2_, p3_, 0.0001)
-        f_of_rot[alpha_idx] = fcalc.call_on_array(phi_array)
+        fcalc = scatter.ScatterCalculator2D(np.concatenate((np.expand_dims(p1_, axis=0),
+                                                            np.expand_dims(p2_, axis=0),
+                                                            np.expand_dims(p3_, axis=0))), 0.0001)
+        f_of_rot[alpha_idx] = fcalc.fc_of_phi(phi_array)
     np.set_printoptions(threshold=np.inf)
     # print(f_of_rot[0])
     # print( np.isnan(f_of_rot))

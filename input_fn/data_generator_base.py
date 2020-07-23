@@ -100,7 +100,9 @@ class DataGeneratorBase(object):
         timer1 = time.time()
         for i in self._filename_list:
             self.saver_obj.save_file_tf(i)
-        print("  Time for data generation: {:0.1f}".format(time.time() - timer1))
+        delta_t = time.time() - timer1
+        print("  Time for data generation: {:0.1f}".format(delta_t))
+        print("  Samples per second: {:0.1f}".format(self._flags.samples_per_file * self._number_of_files / delta_t))
         print("  Done.")
 
         print("Write list...")

@@ -2,7 +2,9 @@ import logging
 import multiprocessing
 import os
 
-import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as triangle_2d_helper
+# import input_fn.input_fn_2d.data_gen_2dt.util_2d.triangle_2d_helper as triangle_2d_helper
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.scatter as scatter
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.misc as misc
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -58,10 +60,10 @@ def plot_one(phi_deg):
     # delta_y = 0
     phi = float(phi_deg) * (2 * np.pi) / 360.0
     phi = (phi_deg / 180 - 1.0)
-    p1, p2, p3 = triangle_2d_helper.rotate_triangle(p1, p2, p3, phi)
-    p1, p2, p3 = triangle_2d_helper.cent_triangle(p1, p2, p3)
-    # p1, p2, p3 = triangle_2d_helper.translation(p1, p2, p3, (0, phi))
-    # p1, p2, p3 = triangle_2d_helper.translation(p1, p2, p3, (phi, 0))
+    p1, p2, p3 = misc.rotate_triangle(p1, p2, p3, phi)
+    p1, p2, p3 = misc.center_triangle(p1, p2, p3)
+    # p1, p2, p3 = misc.translation(p1, p2, p3, (0, phi))
+    # p1, p2, p3 = misc.translation(p1, p2, p3, (phi, 0))
 
     print("calc for phi={}".format(phi_deg))
 
@@ -69,8 +71,10 @@ def plot_one(phi_deg):
     # print(phi_arr[:20], len(phi_arr))
 
     # f = np.array([triangle_2d_helper.multi_triangle_f(x, p1=p1, p2=p2, p3=p3, epsilon=epsilon * 2) for x in phi_arr])
-    fcalc = triangle_2d_helper.Fcalculator(p1=p1, p2=p2, p3=p3, epsilon=epsilon * 2)
-    f = fcalc.call_on_array(phi_arr)
+    fcalc = scatter.ScatterCalculator2D(np.concatenate((np.expand_dims(p1, axis=0),
+                                                            np.expand_dims(p2, axis=0),
+                                                            np.expand_dims(p3, axis=0))), epsilon=epsilon * 2)
+    f = fcalc.fc_of_phi(phi_arr)
     f_real = f.real
     f_imag = f.imag
 

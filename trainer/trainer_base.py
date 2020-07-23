@@ -266,7 +266,7 @@ class TrainerBase(object):
                   .format(val_loss, (val_batch_number + 1) * self._flags.val_batch_size /
                           (time.time() - t_val), time.time() - t_val))
             if val_list not in self._best_loss_dict or self._best_loss_dict[val_list][0] > val_loss:
-                print("set new best loss: {}\t{}\t{}".format(os.path.basename(val_list), val_loss.numpy(), self._model.graph_eval.global_epoch.numpy()))
+                print("set new best loss: {}\t{:10.3f}\t{}".format(os.path.basename(val_list), val_loss.numpy(), self._model.graph_eval.global_epoch.numpy()))
                 self._best_loss_dict[val_list] = [val_loss.numpy(), self._model.graph_eval.global_epoch.numpy()]
             self._model.write_tensorboard(summary_writer_name=os.path.basename(val_list[:-4]))
 

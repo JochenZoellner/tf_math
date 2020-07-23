@@ -10,7 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 import util.flags as flags
-import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tfr_helper as tfr_helper
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.saver as tfr_helper
 from util.misc import get_commit_id
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # or any {'0', '1', '2'}
@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     t2d_saver_obj = tfr_helper.StarPolygon2dSaver(epsilon=0.1, phi_arr=phi_arr, samples_per_file=samples_per_file,
                                                   max_size=50, max_edges=6)
-    # save_TFR_x = partial(tfr_helper.save_tfr_t2d, samples=flags.FLAGS.samples_per_file)
+    # save_TFR_x = partial(saver.save_tfr_t2d, samples=flags.FLAGS.samples_per_file)
     # pool = multiprocessing.Pool(1)
     if flags.FLAGS.jobs <= 0:
         jobs = os.cpu_count()

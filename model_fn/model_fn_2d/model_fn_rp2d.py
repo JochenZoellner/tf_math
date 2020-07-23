@@ -7,7 +7,7 @@ import tensorflow as tf
 from shapely import geometry
 from itertools import permutations
 
-import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.polygone_2d_helper as p2dh
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.polygone_2d_helper as p2dh
 import model_fn.model_fn_2d.util_2d.graphs_rp2d as graphs
 from model_fn.model_fn_base import ModelBase
 

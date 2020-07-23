@@ -122,36 +122,36 @@ class ModelBase(object):
         except AttributeError as ex:
             logging.warning("No can call self.get_graph().print_params(). Please Debug it!")
 
-    def get_placeholder(self):
-        """
-        Model specific inputs as placeholder (dict)
-        e.g.:
-                return {"img": tf.compat.v1.placeholder(tf.float32, [None, self._flags.image_height, None], name="inImg"),
-                        "imgLen": tf.compat.v1.placeholder(tf.int32, [None], name="inSeqLen")}
-        :return:
-        """
-        pass
-
-    def serving_input_receiver_fn(self):
-        """
-        Similar to get_placeholder but puts it into a estimator expected form
-        :return:
-        """
-        inputs = self.get_placeholder()
-        return tf.estimator.export.ServingInputReceiver(inputs, inputs)
-
-    def get_output_nodes(self, has_graph=True):
-        """
-        Model specific output names
-        e.g.:
-        if has_graph:
-            logits3d = tf.transpose(self._graph_out['logits'], [1, 0, 2])
-            tf.identity(logits3d, name="outConfMat")  # name to grab from java
-            tf.identity(self._graph_out['outLen'], name="outSeqLen")  # name to grab from java
-        return "outConfMat" + "," + "outSeqLen"  # return names as comma separated string without spaces
-        :return:
-        """
-        pass
+    # def get_placeholder(self):
+    #     """
+    #     Model specific inputs as placeholder (dict)
+    #     e.g.:
+    #             return {"img": tf.compat.v1.placeholder(tf.float32, [None, self._flags.image_height, None], name="inImg"),
+    #                     "imgLen": tf.compat.v1.placeholder(tf.int32, [None], name="inSeqLen")}
+    #     :return:
+    #     """
+    #     pass
+    #
+    # def serving_input_receiver_fn(self):
+    #     """
+    #     Similar to get_placeholder but puts it into a estimator expected form
+    #     :return:
+    #     """
+    #     inputs = self.get_placeholder()
+    #     return tf.estimator.export.ServingInputReceiver(inputs, inputs)
+    #
+    # def get_output_nodes(self, has_graph=True):
+    #     """
+    #     Model specific output names
+    #     e.g.:
+    #     if has_graph:
+    #         logits3d = tf.transpose(self._graph_out['logits'], [1, 0, 2])
+    #         tf.identity(logits3d, name="outConfMat")  # name to grab from java
+    #         tf.identity(self._graph_out['outLen'], name="outSeqLen")  # name to grab from java
+    #     return "outConfMat" + "," + "outSeqLen"  # return names as comma separated string without spaces
+    #     :return:
+    #     """
+    #     pass
 
     def write_tensorboard(self, summary_writer_name=None):
         """Write metrics to tensorboard-file (it's called after each epoch) and reset tf.keras.metrics

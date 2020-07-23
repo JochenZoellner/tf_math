@@ -5,7 +5,7 @@ from trainer.trainer_base import TrainerBase
 import tensorflow as tf
 import model_fn.model_fn_2d.model_fn_triangle2d_area as models
 import util.flags as flags
-from input_fn.input_fn_2d.input_fn_generator_triangle2d import InputFn2DT
+from input_fn.input_fn_2d.input_fn_generator_t2d import InputFnTriangle2D
 from util.misc import get_commit_id, get_date_id
 # Model parameter
 # ===============
@@ -21,7 +21,7 @@ flags.FLAGS.parse_flags()
 class Trainer2DTriangle(TrainerBase):
     def __init__(self):
         super(Trainer2DTriangle, self).__init__()
-        self._input_fn_generator = InputFn2DT(self._flags)
+        self._input_fn_generator = InputFnTriangle2D(self._flags)
         self._model_fn_class = getattr(models, self._flags.model_type)
         # self._graph.info()
 

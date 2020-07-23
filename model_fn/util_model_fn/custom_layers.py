@@ -7,6 +7,7 @@ class ScatterPolygon2D(tf.keras.layers.Layer):
         tf.keras.layers.Layer.__init__(self, trainable=False)
         self._with_batch_dim_tf = with_batch_dim
         self.mydtype = dtype
+        fc_tensor = tf.cast(fc_tensor, dtype=self.mydtype)
         self.allow_variable_edges = allow_variable_edges
         if self.mydtype == tf.float64:
             self.complex_dtype = tf.complex128
@@ -69,7 +70,7 @@ class ScatterPolygon2D(tf.keras.layers.Layer):
             res_array_tf = tf.where(tf.math.abs(self.complex_dot(p0p1_tf, self._q_tf)) >= self.epsilon_tf, case1_array_tf, case2_array_tf)
 
         # if p0_tf == p1_tf return zero, needed for variable edge polygons
-        p0p1_dist = tf.abs(tf.reduce_sum(p0p1_tf, axis=-1))
+        p0p1_dist = tf.abs(tf.reduce_sum(tf.abs(p0p1_tf), axis=-1))
         epsilon2_array = tf.broadcast_to(tf.square(self.epsilon_tf), tf.shape(p0p1_dist))
         condition_zero = tf.transpose(tf.broadcast_to(tf.math.less(p0p1_dist, epsilon2_array), tf.reverse(tf.shape(res_array_tf), axis=[0])))
         if not self.allow_variable_edges and tf.reduce_any(condition_zero):

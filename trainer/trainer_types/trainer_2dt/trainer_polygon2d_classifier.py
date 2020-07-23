@@ -7,7 +7,7 @@ import tensorflow as tf
 tf.config.experimental_run_functions_eagerly(True)
 import util.flags as flags
 from trainer.trainer_base import TrainerBase
-from input_fn.input_fn_2d.input_fn_generator_polygon2d import InputFnPolygon2D
+from input_fn.input_fn_2d.input_fn_generator_ap2d import InputFnPolygon2D
 import model_fn.model_fn_2d.model_fn_polygon2d_classifier as models
 
 # Model parameter

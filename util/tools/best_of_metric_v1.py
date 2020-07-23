@@ -19,6 +19,7 @@ def get_metric_from_event_file(file_path, metric="loss", dtype=np.float32):
     metric_value_array = np.asarray(metric_value_lst, dtype=dtype)
     return metric_value_array
 
+
 if __name__ == "__main__":
     print("best of metric v1")
 

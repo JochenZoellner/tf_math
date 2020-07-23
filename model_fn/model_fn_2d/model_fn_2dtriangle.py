@@ -8,8 +8,10 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from shapely import geometry
 
-import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as t2d
-import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tf_polygon_2d_helper as tf_p2d
+# import input_fn.input_fn_2d.data_gen_2dt.util_2d.triangle_2d_helper as t2d
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.misc as misc
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.scatter as scatter
+# import input_fn.input_fn_2d.data_gen_2dt.util_2d.tf_polygon_2d_helper as tf_p2d
 
 import model_fn.model_fn_2d.util_2d.graphs_2d as graphs
 import model_fn.util_model_fn.losses as losses
@@ -41,8 +43,8 @@ class ModelTriangle(ModelBase):
 
         self.metrics["train"]["loss_rmse_area"] = tf.keras.metrics.Mean("loss_rmse_area", self.mydtype)
         self.metrics["eval"]["loss_rmse_area"] = tf.keras.metrics.Mean("loss_rmse_area", self.mydtype)
-        self.metrics["train"]["loss_relativError_area"] = tf.keras.metrics.Mean("loss_relativError_area", self.mydtype)
-        self.metrics["eval"]["loss_relativError_area"] = tf.keras.metrics.Mean("loss_relativError_area", self.mydtype)
+        self.metrics["train"]["loss_mape_area"] = tf.keras.metrics.Mean("loss_mape_area", self.mydtype)
+        self.metrics["eval"]["loss_mape_area"] = tf.keras.metrics.Mean("loss_mape_area", self.mydtype)
 
     def set_interface(self, val_dataset):
         build_inputs, build_out = super(ModelTriangle, self).set_interface(val_dataset)
@@ -51,7 +53,7 @@ class ModelTriangle(ModelBase):
                                                                              dtype=self.mydtype),
                                                            points_tf=tf.cast(build_inputs[1]["points"],
                                                                              dtype=self.mydtype),
-                                                           with_batch_dim=True, dtype=self.mydtype)
+                                                           with_batch_dim=True, dtype=tf.float64)
         return build_inputs, build_out
 
     def get_graph(self):
@@ -78,17 +80,99 @@ class ModelTriangle(ModelBase):
         self.get_graph().print_params()
 
     def loss(self, predictions, targets):
-        if not self.scatter_polygon_tf:
-            self.scatter_polygon_tf = c_layer.ScatterPolygon2D(fc_tensor=tf.cast(predictions["fc"], dtype=self.mydtype),
-                                                               points_tf=tf.cast(predictions["pre_points"],
-                                                                                 dtype=self.mydtype),
-                                                               with_batch_dim=True, dtype=self.mydtype)
         self._loss = tf.constant(0.0, dtype=self.mydtype)
-        fc = tf.cast(predictions['fc'], dtype=self.mydtype)
-        pre_points = tf.cast(tf.reshape(predictions['pre_points'], [-1, 3, 2]), dtype=self.mydtype)
-        pre_points = tf_p2d.make_positiv_orientation(pre_points, dtype=self.mydtype)
-        pre_in = self.scatter_polygon_tf(points_tf=pre_points)
-        tgt_in = fc[:, 1:, :]
+        if "pre_points" in predictions:
+            if not self.scatter_polygon_tf:
+                self.scatter_polygon_tf = c_layer.ScatterPolygon2D(fc_tensor=tf.cast(predictions["fc"], dtype=self.mydtype),
+                                                                   points_tf=tf.cast(predictions["pre_points"],
+                                                                                     dtype=self.mydtype),
+                                                                   with_batch_dim=True, dtype=tf.float64)
+            fc = tf.cast(predictions['fc'], dtype=self.mydtype)
+            pre_points = tf.cast(tf.reshape(predictions['pre_points'], [-1, 3, 2]), dtype=self.mydtype)
+            pre_points = misc.make_positiv_orientation(pre_points, dtype=self.mydtype)
+            pre_in = tf.cast(self.scatter_polygon_tf(points_tf=pre_points), dtype=self.mydtype)
+            tgt_in = fc[:, 1:, :]
+            loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in, tgt_in))
+            # tf.print(loss_input_diff)
+            targets_oriented = misc.make_positiv_orientation(targets["points"], dtype=self.mydtype)
+
+            loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)),
+                                      self.mydtype)
+            if tf.math.mod(self._loss_counter, tf.constant(50, dtype=tf.int64)) == tf.constant(0, dtype=tf.int64):
+                if "best_point_diff" in self._flags.loss_mode or "show_best_point_diff" in self._flags.loss_mode:
+                    loss_best_point_diff = tf.cast(losses.batch_point3_loss(targets["points"],
+                                                               predictions["pre_points"],
+                                                               batch_size=self._current_batch_size), self.mydtype)
+                else:
+                    loss_best_point_diff = tf.constant(0.0, self.mydtype)
+                self.metrics[self._mode]["loss_best_point_diff"](loss_best_point_diff)
+            # tf.print("input_diff-loss", loss_input_diff)
+            if "input_diff" in self._flags.loss_mode:
+                self._loss += loss_input_diff
+            if "point_diff" in self._flags.loss_mode:
+                self._loss += loss_point_diff
+            # if "best_point_diff" in self._flags.loss_mode:
+            #     self._loss += loss_best_point_diff
+
+            self.metrics[self._mode]["loss_input_diff"](loss_input_diff)
+            self.metrics[self._mode]["loss_point_diff"](loss_point_diff)
+
+        # relative_loss = tf.constant(0, self.mydtype)
+        # mse_area = tf.constant(0, self.mydtype)
+        if "pre_area" in predictions:
+            areas_tgt = tf.expand_dims(misc.get_area_of_triangle(targets['points']), axis=-1)
+            # tf.print(tf.shape(areas_tgt), tf.shape(predictions['pre_area']))
+            if not self.mape:
+                self.mape = tf.keras.losses.MeanAbsolutePercentageError()
+            relative_loss = tf.reduce_mean(self.mape(areas_tgt, predictions['pre_area']))
+            mse_area = tf.reduce_mean(tf.keras.losses.mean_squared_error(areas_tgt, predictions['pre_area']))
+
+            if "mape_area" in self._flags.loss_mode:
+                self._loss += relative_loss
+
+            if "mse_area" in self._flags.loss_mode:
+                self._loss += mse_area
+
+            self.metrics[self._mode]["loss_rmse_area"](mse_area)
+            self.metrics[self._mode]["loss_mape_area"](relative_loss)
+
+
+
+        # plt.figure()
+        # mask_fc = np.ma.masked_where(fc[0, 0, :] == 0.0, fc[0, 0, :])
+        # plt.plot(mask_fc, fc[0, 1, :], "-r", label="input_real")
+        # plt.plot(mask_fc, fc[0, 2, :], "-b", label="input_imag")
+        # import input_fn.input_fn_2d.data_gen_2dt.util_2d.triangle_2d_helper as t2dh
+        # scatter_ploygon = t2dh.ScatterCalculator2D(p1=targets_oriented[0][0], p2=targets_oriented[0][1], p3=targets_oriented[0][2])
+        # res_np = scatter_ploygon.call_on_array(fc[0, 0, :])
+        # mask_res_np = np.ma.masked_where(fc[0, 0, :] == 0.0, res_np)
+        # plt.plot(mask_fc, mask_res_np.real, "+r", label="tgt_np_real")
+        # plt.plot(mask_fc, mask_res_np.imag, "+b", label="tgt_np_imag")
+        #
+        #
+        # plt.plot(mask_fc, res_scatter[0, 0, :], label="pred_rec_real")
+        # plt.plot(mask_fc, res_scatter[0, 1, :], label="pred_rec_imag")
+        # # res_scatter = self.scatter_polygon_tf(points_tf=targets_oriented)
+        # # plt.plot(mask_fc, res_scatter[0, 0, :], label="input_rec_real")
+        # # plt.plot(mask_fc, res_scatter[0, 1, :], label="input_rec_imag")
+        # print("phi:", fc[0, 0, :])
+        # print("tgt shape", tf.shape(targets_oriented))
+        # print("scatter res shape", tf.shape(res_scatter))
+        # plt.legend()
+        # plt.show()
+        # if self._flags.loss_mode == "point3":
+        #     loss0 = tf.cast(batch_point3_loss(self._targets['points'], self._graph_out['pre_points'],
+        #                                   self._params["flags"].train_batch_size), dtype=tf.float32)
+        # elif self._flags.loss_mode == "no_match":
+        #     loss0 = tf.cast(ordered_point3_loss(self._targets['points'], self._graph_out['pre_points'],
+        #                                   self._params["flags"].train_batch_size, keras_graph=self), dtype=tf.float32)
+        # elif self._flags.loss_mode == "fast_no_match":
+        #     loss0 = tf.cast(no_match_loss(self._targets['points'], self._graph_out['pre_points'],
+        #                                   self._params["flags"].train_batch_size), dtype=tf.float32)
+        # else:
+        #     raise KeyError("Loss-mode: {} do not exist!".format(self._flags.loss_mode))
+
+
         # ### plot
         # fig, (ax1, ax2, ax3) = plt.subplots(nrows=3)
         # fig.suptitle("compare loss")
@@ -121,79 +205,7 @@ class ModelTriangle(ModelBase):
         # ax3.set_ylim(-50, 50)
         # plt.show()
         ### end plot
-        loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in, tgt_in))
-        targets_oriented = tf_p2d.make_positiv_orientation(targets["points"], dtype=self.mydtype)
 
-        loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)),
-                                  self.mydtype)
-        if tf.math.mod(self._loss_counter, tf.constant(50, dtype=tf.int64)) == tf.constant(0, dtype=tf.int64):
-            if "best_point_diff" in self._flags.loss_mode or "show_best_point_diff" in self._flags.loss_mode:
-                loss_best_point_diff = tf.cast(losses.batch_point3_loss(targets["points"],
-                                                           predictions["pre_points"],
-                                                           batch_size=self._current_batch_size), self.mydtype)
-            else:
-                loss_best_point_diff = tf.constant(0.0, self.mydtype)
-            self.metrics[self._mode]["loss_best_point_diff"](loss_best_point_diff)
-        # tf.print("input_diff-loss", loss_input_diff)
-        if "input_diff" in self._flags.loss_mode:
-            self._loss += loss_input_diff
-        if "point_diff" in self._flags.loss_mode:
-            self._loss += loss_point_diff
-        # if "best_point_diff" in self._flags.loss_mode:
-        #     self._loss += loss_best_point_diff
-
-        areas_tgt = tf.expand_dims(tf_p2d.get_area_of_triangle(targets['points']), axis=-1)
-        # tf.print(tf.shape(areas_tgt), tf.shape(predictions['pre_area']))
-
-        if not self.mape:
-            self.mape = tf.keras.losses.MeanAbsolutePercentageError()
-        relative_loss = tf.reduce_mean(self.mape(areas_tgt, predictions['pre_area']))
-        if "relativeError_area" in self._flags.loss_mode:
-            self._loss += relative_loss
-
-        mse_area = tf.reduce_mean(tf.keras.losses.mean_squared_error(areas_tgt, predictions['pre_area']))
-        if "mse_area" in self._flags.loss_mode:
-            self._loss += mse_area
-
-        self.metrics[self._mode]["loss_rmse_area"](mse_area)
-        self.metrics[self._mode]["loss_relativError_area"](relative_loss)
-        self.metrics[self._mode]["loss_input_diff"](loss_input_diff)
-        self.metrics[self._mode]["loss_point_diff"](loss_point_diff)
-
-
-        # plt.figure()
-        # mask_fc = np.ma.masked_where(fc[0, 0, :] == 0.0, fc[0, 0, :])
-        # plt.plot(mask_fc, fc[0, 1, :], "-r", label="input_real")
-        # plt.plot(mask_fc, fc[0, 2, :], "-b", label="input_imag")
-        # import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.triangle_2d_helper as t2dh
-        # scatter_ploygon = t2dh.ScatterCalculator2D(p1=targets_oriented[0][0], p2=targets_oriented[0][1], p3=targets_oriented[0][2])
-        # res_np = scatter_ploygon.call_on_array(fc[0, 0, :])
-        # mask_res_np = np.ma.masked_where(fc[0, 0, :] == 0.0, res_np)
-        # plt.plot(mask_fc, mask_res_np.real, "+r", label="tgt_np_real")
-        # plt.plot(mask_fc, mask_res_np.imag, "+b", label="tgt_np_imag")
-        #
-        #
-        # plt.plot(mask_fc, res_scatter[0, 0, :], label="pred_rec_real")
-        # plt.plot(mask_fc, res_scatter[0, 1, :], label="pred_rec_imag")
-        # # res_scatter = self.scatter_polygon_tf(points_tf=targets_oriented)
-        # # plt.plot(mask_fc, res_scatter[0, 0, :], label="input_rec_real")
-        # # plt.plot(mask_fc, res_scatter[0, 1, :], label="input_rec_imag")
-        # print("phi:", fc[0, 0, :])
-        # print("tgt shape", tf.shape(targets_oriented))
-        # print("scatter res shape", tf.shape(res_scatter))
-        # plt.legend()
-        # plt.show()
-        # if self._flags.loss_mode == "point3":
-        #     loss0 = tf.cast(batch_point3_loss(self._targets['points'], self._graph_out['pre_points'],
-        #                                   self._params["flags"].train_batch_size), dtype=tf.float32)
-        # elif self._flags.loss_mode == "no_match":
-        #     loss0 = tf.cast(ordered_point3_loss(self._targets['points'], self._graph_out['pre_points'],
-        #                                   self._params["flags"].train_batch_size, keras_graph=self), dtype=tf.float32)
-        # elif self._flags.loss_mode == "fast_no_match":
-        #     loss0 = tf.cast(no_match_loss(self._targets['points'], self._graph_out['pre_points'],
-        #                                   self._params["flags"].train_batch_size), dtype=tf.float32)
-        # else:
-        #     raise KeyError("Loss-mode: {} do not exist!".format(self._flags.loss_mode))
         self._loss_counter.assign_add(1)
         return self._loss
 
@@ -278,8 +290,8 @@ class ModelTriangle(ModelBase):
         phi_tf = tf.expand_dims(tf.constant(phi_arr, self.mydtype), axis=0)
         import model_fn.util_model_fn.custom_layers as c_layers
         fc_obj = c_layers.ScatterPolygon2D(phi_tf, dtype=self.mydtype, with_batch_dim=False)
-        from input_fn.input_fn_2d.input_fn_generator_triangle2d import InputFn2DT
-        input_gen = InputFn2DT(self._flags)
+        from input_fn.input_fn_2d.input_fn_generator_t2d import InputFnTriangle2D
+        input_gen = InputFnTriangle2D(self._flags)
         select_counter = 0
         for i in range(summary_lenght):
             if select_counter >= 200:
@@ -299,23 +311,34 @@ class ModelTriangle(ModelBase):
             iou_arr[i] = intersetion_area / union_area
             tgt_area_arr[i] = tgt_polygon.area
             pre_area_arr[i] = pre_polygon.area
-            min_aspect_ratio_arr[i] = t2d.get_min_aspect_ratio(tgt_points)
+            min_aspect_ratio_arr[i] = misc.get_min_aspect_ratio(tgt_points)
 
             # co_loss_arr[i] = self._summary_object["ordered_best"][i]
             # wo_loss_arr[i] = self._summary_object["unordered_best"][i]
             # PLOT = "stripes"
             phi_arr_full = phi_array_open_symetric_no90(delta_phi=0.01)
-            fc_arr_tgt = t2d.make_scatter_data(tgt_points, epsilon=0.002, phi_arr=phi_arr_full)
-            fc_arr_pre = t2d.make_scatter_data(pre_points, epsilon=0.002, phi_arr=phi_arr_full)
+            # fc_arr_tgt = scatter.make_scatter_data(tgt_points, epsilon=0.002, phi_arr=phi_arr_full)
+            # fc_arr_pre = scatter.make_scatter_data(pre_points, epsilon=0.002, phi_arr=phi_arr_full)
+            # phi_batch = np.broadcast_to(np.expand_dims(phi_arr, axis=0),
+            #                             (1, 1, phi_arr.shape[0]))
+            # fc_arr_tgt = fc_obj(tgt_points)
+            # fc_arr_tgt = tf.concat((phi_batch, tf.expand_dims(fc_arr_tgt, axis=0)), axis=1)
+            # fc_arr_pre = fc_obj(pre_points)
 
             def cut_res(input_points, phi_arr):
-                input_points = tf.squeeze(tf_p2d.make_positiv_orientation(tf.expand_dims(input_points, axis=0)), axis=0).numpy()
+                input_points = tf.squeeze(misc.make_positiv_orientation(tf.expand_dims(input_points, axis=0)), axis=0).numpy()
                 fc_res = fc_obj(input_points)
                 phi_batch = np.broadcast_to(np.expand_dims(phi_arr, axis=0),
                                             (1, 1, phi_arr.shape[0]))
                 d_input_points = {"fc": tf.concat((phi_batch, tf.expand_dims(fc_res, axis=0)), axis=1)}
                 fc_res_cut = tf.squeeze(input_gen.cut_phi_batch(d_input_points)["fc"], axis=0)
                 return fc_res_cut
+
+            def uncut_res(input_points, phi_arr):
+                input_points = tf.squeeze(misc.make_positiv_orientation(tf.expand_dims(input_points, axis=0)), axis=0).numpy()
+                fc_res = fc_obj(input_points)
+                phi_batch = np.expand_dims(phi_arr, axis=0)
+                return tf.concat((phi_batch, fc_res), axis=0)
 
             def calc_doa_x(fc_tgt, fc_pre):
                 return np.sum(np.abs(fc_tgt - fc_pre)) / np.sum(
@@ -324,6 +347,9 @@ class ModelTriangle(ModelBase):
             fc_arr_tgt_cut = cut_res(tgt_points, phi_arr)
             fc_arr_pre_cut = cut_res(pre_points, phi_arr)
 
+            fc_arr_tgt = uncut_res(tgt_points, phi_arr)
+            fc_arr_pre = uncut_res(pre_points, phi_arr)
+
             doa_real_arr[i] = calc_doa_x(fc_arr_tgt[1], fc_arr_pre[1])
             doa_imag_arr[i] = calc_doa_x(fc_arr_tgt[2], fc_arr_pre[2])
 
@@ -331,7 +357,7 @@ class ModelTriangle(ModelBase):
             doa_imag_arr_cut[i] = calc_doa_x(fc_arr_tgt_cut[2], fc_arr_pre_cut[2])
 
             select = min_aspect_ratio_arr[i] > 0.15 and iou_arr[i] < 0.6 and doa_imag_arr_cut[i] < 0.05 and doa_real_arr_cut[i] < 0.05
-            # select = True
+            select = True
             PLOT = "fc"
             if PLOT and select:
                 select_counter += 1
@@ -347,7 +373,7 @@ class ModelTriangle(ModelBase):
 
                 if PLOT == "fc":
                     # target
-                    plot_cut = True
+                    plot_cut = False
                     if plot_cut:
                         ax2.plot(fc_arr_tgt_cut[0], npm.masked_where(0 == fc_arr_tgt_cut[1], fc_arr_tgt_cut[1]), 'b-', label="real_tgt", linewidth=2)
                         ax2.plot(fc_arr_tgt_cut[0], npm.masked_where(0 == fc_arr_tgt_cut[2], fc_arr_tgt_cut[2]), 'y-', label="imag_tgt", linewidth=2)
@@ -386,9 +412,9 @@ class ModelTriangle(ModelBase):
                     a = np.concatenate((range_arr, range_arr, zeros_arr), axis=0)
                     b = np.concatenate((zeros_arr, range_arr, range_arr), axis=0)
                     phi_arr = a + 1.0j * b
-                    fc_arr_tgt = t2d.make_scatter_data(tgt_points, phi_arr=phi_arr, epsilon=0.002, dphi=0.001,
+                    fc_arr_tgt = scatter.make_scatter_data(tgt_points, phi_arr=phi_arr, epsilon=0.002, dphi=0.001,
                                                        complex_phi=True)
-                    fc_arr_pre = t2d.make_scatter_data(pre_points, phi_arr=phi_arr, epsilon=0.002, dphi=0.001,
+                    fc_arr_pre = scatter.make_scatter_data(pre_points, phi_arr=phi_arr, epsilon=0.002, dphi=0.001,
                                                        complex_phi=True)
                     # ax2.scatter(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
                     for idx in range(fc_arr_tgt[2].shape[0]):

@@ -8,7 +8,8 @@ import tensorflow as tf
 
 import model_fn.model_fn_2d.util_2d.graphs_2d as graphs
 from model_fn.model_fn_base import ModelBase
-import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tf_polygon_2d_helper as tf_p2dh
+# import input_fn.input_fn_2d.data_gen_2dt.util_2d.tf_polygon_2d_helper as tf_p2dh
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.misc as misc
 
 
 class ModelTriangleArea(ModelBase):
@@ -36,7 +37,7 @@ class ModelTriangleArea(ModelBase):
         loss = tf.constant(0.0, dtype=tf.float32)
 
 
-        areas_tgt = tf.expand_dims(tf_p2dh.get_area_of_triangle(targets['points'], smallareawarning=9.0), axis=-1)
+        areas_tgt = tf.expand_dims(misc.get_area_of_triangle(targets['points'], smallareawarning=9.0), axis=-1)
         # tf.print(tf.shape(areas_tgt), tf.shape(predictions['pre_area']))
 
         if "relativeError" in self._flags.loss_mode:

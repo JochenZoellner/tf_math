@@ -26,6 +26,8 @@ class DecayOptimizer(object):
         self._optimizer_params["ema_decay"] = 0.1  # set decay of moving average variables
         self._optimizer_params[
             "learning_circle"] = 3  # number of epochs with same learning rate, except for restart-strategies
+        self._optimizer_params["clipvalue"] = None
+        self._optimizer_params["clipnorm"] = None
         self.update_params()
 
     def update_params(self):
@@ -51,9 +53,9 @@ class DecayOptimizer(object):
     def get_keras_optimizer(self):
         """return tf.keras.optimizer.Optimizer_V2 class-instance"""
         optimizer_kwargs = {}
-        if "clipvalue" in self._optimizer_params:
+        if "clipvalue" in self._optimizer_params and self._optimizer_params["clipvalue"] is not None:
             optimizer_kwargs["clipvalue"] = self._optimizer_params["clipvalue"]
-        if "clipnorm" in self._optimizer_params:
+        if "clipnorm" in self._optimizer_params and self._optimizer_params["clipnorm"] is not None:
             optimizer_kwargs["clipnorm"] = self._optimizer_params["clipnorm"]
 
         if not self._keras_optimizer:

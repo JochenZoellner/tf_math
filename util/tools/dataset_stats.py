@@ -7,8 +7,8 @@ import pathlib
 from util import flags
 import tensorflow as tf
 import json
-import input_fn.input_fn_2d.input_fn_generator_triangle2d as InputFn
-import input_fn.input_fn_2d.data_gen_2dt.data_gen_t2d_util.tf_polygon_2d_helper as tf_p2dh
+import input_fn.input_fn_2d.input_fn_generator_t2d as InputFn
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.tf_polygon_2d_helper as tf_p2dh
 
 
 logger = logging.getLogger("dataset_stats.py")
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     logger.debug("CWD: {}".format(os.getcwd()))
     assert flags.FLAGS.val_list, "--val_list must be set!"
 
-    input_fn_generator = InputFn.InputFn2DT(flags.FLAGS)
+    input_fn_generator = InputFn.InputFnTriangle2D(flags.FLAGS)
     dataset_val = input_fn_generator.get_input_fn_val()
     test_batch = next(iter(dataset_val))
 
