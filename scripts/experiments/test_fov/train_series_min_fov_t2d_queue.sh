@@ -6,7 +6,7 @@ GPU=$1
 shift
 QUEUE="gpu${GPU}"
 EPOCH=40
-set -xe
+set -e
 
 DATASET="t2d_fov_exp"
 DATALEN=312
