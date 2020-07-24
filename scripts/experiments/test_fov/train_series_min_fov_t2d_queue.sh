@@ -44,9 +44,11 @@ do
 #      "
 #    CUDA_VISIBLE_DEVICES="" PYTHONPATH=/home/$USER/devel/projects/projectneiss2d/tf_neiss:$PYTHONPATH python -u ./tf_neiss/trainer/lav_types/lav_triangle2d.py ${LAV_PARAMS} >> "models/dataset_${DATASET}/${ID}/lav-${ID}.log" 2>&1
 done
-
-# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/train_series_min_fov_t2d_queue.sh min_fov_series_0 0
-# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/train_series_min_fov_t2d_queue.sh min_fov_series_1 1
-# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/train_series_min_fov_t2d_queue.sh min_fov_series_2 0
-# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/train_series_min_fov_t2d_queue.sh min_fov_series_3 1
-# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/train_series_min_fov_t2d_queue.sh min_fov_series_4 0
+<< ////
+# example call: $>
+sh ./tf_neiss/scripts/experiments/test_fov/train_series_min_fov_t2d_queue.sh min_fov_series_0 0
+sh ./tf_neiss/scripts/experiments/test_fov/train_series_min_fov_t2d_queue.sh min_fov_series_1 1
+sh ./tf_neiss/scripts/experiments/test_fov/train_series_min_fov_t2d_queue.sh min_fov_series_2 0
+sh ./tf_neiss/scripts/experiments/test_fov/train_series_min_fov_t2d_queue.sh min_fov_series_3 1
+sh ./tf_neiss/scripts/experiments/test_fov/train_series_min_fov_t2d_queue.sh min_fov_series_4 0
+////
