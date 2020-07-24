@@ -7,7 +7,8 @@ import tensorflow as tf
 from shapely import geometry
 from itertools import permutations
 
-import input_fn.input_fn_2d.data_gen_2dt.util_2d.polygone_2d_helper as p2dh
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.convert as convert
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.scatter as scatter
 import model_fn.model_fn_2d.util_2d.graphs_rp2d as graphs
 from model_fn.model_fn_base import ModelBase
 
@@ -101,10 +102,10 @@ class ModelRegularPolygon(ModelBase):
                                 'rotation': float(target_dict['rotation'][i]),
                                 'translation': np.squeeze(target_dict['translation'][i]),
                                 'edges': int(target_dict['edges'][i])}
-                pred_array = p2dh.rpf_to_points_array(rpf_dict_pred)
-                pred_tuples = p2dh.array_to_tuples(pred_array)
-                tgt_array = p2dh.rpf_to_points_array(rpf_dict_tgt)
-                tgt_tuples = p2dh.array_to_tuples(tgt_array)
+                pred_array = convert.rpf_to_points_array(rpf_dict_pred)
+                pred_tuples = convert.array_to_tuples(pred_array)
+                tgt_array = convert.rpf_to_points_array(rpf_dict_tgt)
+                tgt_tuples = convert.array_to_tuples(tgt_array)
                 pre_polygon = geometry.Polygon(pred_tuples)
                 tgt_polygon = geometry.Polygon(tgt_tuples)
                 intersetion_area = pre_polygon.intersection(tgt_polygon).area
@@ -113,18 +114,18 @@ class ModelRegularPolygon(ModelBase):
 
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9.5, 14))
                 ## prediction
-                polygon_calculator = p2dh.Fcalculator(pred_tuples)
+                polygon_calculator = scatter.Fcalculator(pred_tuples)
                 phi_array = np.arange(np.pi / 2 - 1.5, np.pi / 2 + 1.5, 0.01)
-                polygon_scatter_res = polygon_calculator.F_of_phi(phi=phi_array).astype(dtype=np.complex64)
+                polygon_scatter_res = polygon_calculator.f_of_phi(phi=phi_array).astype(dtype=np.complex64)
                 ax1.fill(pred_array.transpose()[0], pred_array.transpose()[1], label="pred", alpha=0.5)
                 ax2.plot(phi_array, polygon_scatter_res.real, "-b", label="real_polygon_pred")
                 ax2.plot(phi_array, polygon_scatter_res.imag, "-y", label="imag_polygon_pred")
                 ax2.plot(phi_array, np.abs(polygon_scatter_res), "-r", label="abs_polygon_pred")
 
                 ## target
-                polygon_calculator = p2dh.Fcalculator(tgt_tuples)
+                polygon_calculator = scatter.Fcalculator(tgt_tuples)
                 phi_array = np.arange(np.pi / 2 - 1.5, np.pi / 2 + 1.5, 0.01)
-                polygon_scatter_res = polygon_calculator.F_of_phi(phi=phi_array).astype(dtype=np.complex64)
+                polygon_scatter_res = polygon_calculator.f_of_phi(phi=phi_array).astype(dtype=np.complex64)
                 ax1.fill(tgt_array.transpose()[0], tgt_array.transpose()[1], label="tgt", alpha=0.5)
                 ax2.plot(phi_array, polygon_scatter_res.real, "-b", label="real_polygon_tgt")
                 ax2.plot(phi_array, polygon_scatter_res.imag, "-y", label="imag_polygon_tgt")
