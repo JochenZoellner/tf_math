@@ -5,90 +5,98 @@ import matplotlib.pyplot as plt
 import numpy as np
 import shapely.geometry as geometry
 
-import input_fn.input_fn_2d.data_gen_2dt.util_2d.convert as convert
-import input_fn.input_fn_2d.data_gen_2dt.util_2d.misc as misc
-
+from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc, convert
 logger = logging.getLogger("object_generator 2D")
 
 
 # logger.setLevel("DEBUG")
 # logger.setLevel("INFO")
 
+# def generate_target_triangle(center_of_weight=False, x_sorted=True, min_area=10, min_aspect_ratio=0.0, rng=None):
+#     if not rng:
+#         rng = np.random.Generator(np.random.PCG64())
+#     while True:
+#         points = rng.uniform(-50.0, 50, size=(3, 2)).astype(np.float32)
+#         area = misc.get_area_of_triangle(points)
+#         if area >= min_area and min_aspect_ratio < misc.get_min_aspect_ratio(points):
+#             break
+#
+#     if center_of_weight:
+#         points = misc.center_triangle(points)
+#     if x_sorted:
+#         points = points[points[:, 0].argsort()]
+#
+#     return points.astype(np.float32)
 
-def generate_target_triangle(center_of_weight=False, x_sorted=True, min_area=10, min_aspect_ratio=0.0, rng=None):
+
+def generate_target_triangle(size=50.0, center=False, x_sorted=True, min_area=10.0,
+                              min_aspect_ratio=0.0, rng=None, min_dist=0.0, min_angle=20.0,
+                             min_distance=0.0, debug=False):
     if not rng:
         rng = np.random.Generator(np.random.PCG64())
     while True:
-        points = rng.uniform(-50.0, 50, size=(3, 2)).astype(np.float32)
-        a_x = points[0, 0]
-        a_y = points[0, 1]
-        b_x = points[1, 0]
-        b_y = points[1, 1]
-        c_x = points[2, 0]
-        c_y = points[2, 1]
-
-        area = np.abs((a_x * (b_y - c_y) + b_x * (c_y - a_y) + c_x * (a_y - b_y)) / 2.0)
-        if area >= min_area and min_aspect_ratio < misc.get_min_aspect_ratio(points):
+        points = rng.uniform(-size, size, size=(3, 2)).astype(np.float32)
+        area = misc.get_area_of_triangle(points)
+        if area >= min_area \
+                and misc.has_min_aspect_ratio(points, min_aspect_ratio) \
+                and misc.has_min_point_distance_batched(points, min_dist) \
+                and misc.has_min_angle(points, min_angle) and \
+                misc.has_min_point_distance_batched(points, min_distance):
             break
 
-    if center_of_weight:
-        points[0], points[1], points[2] = misc.center_triangle(p1=points[0], p2=points[1], p3=points[2])
+    if center:
+        points = misc.center_triangle(points)
     if x_sorted:
         points = points[points[:, 0].argsort()]
     return points.astype(np.float32)
 
 
-def generate_target_polygon(min_area=10, max_edges=6, min_edges=3, max_size=50, rng=None):
+def generate_target_polygon(min_area=10, max_edges=6, min_edges=3, max_size=50, rng=None, min_angle=20.0, min_distance=2.0):
     if not rng:
         rng = np.random.Generator(np.random.PCG64())
     edges = rng.integers(min_edges, max_edges + 1)
-    size = max_size
     # edges = 3
     logger.info("Generating polygon with {} edges".format(edges))
+    shots = 0
     while True:
-        tuple_list = convert.array_to_tuples(rng.uniform(-size, size, size=(3, 2)).astype(np.float32))
-        shots = 0
-        while len(tuple_list) < edges:
+        polygon_points = generate_target_triangle(size=max_size, min_dist=min_distance, min_angle=min_angle, min_distance=min_distance)
+        while polygon_points.shape[0] < edges:
             shots += 1
             if shots > 100:
-                tuple_list = convert.array_to_tuples(
-                    np.reshape([rng.uniform(-size, size) for x in range(6)], (3, 2)).astype(np.float32))
+                logger.info("Max attempts to generate polygon reached, start over!")
+                polygon_points = generate_target_triangle(min_dist=min_distance)
                 shots = 0
-            tuple_list_buffer = tuple_list.copy()
-            tuple_list_buffer.insert(rng.integers(0, len(tuple_list)),
-                                     (rng.uniform(-size, size), rng.uniform(-size, size)))
-            linear_ring = geometry.LinearRing(tuple(tuple_list_buffer))
-            if linear_ring.is_simple:
-                pointy = 90
-                for s_ in range(len(tuple_list_buffer)):
-                    arr = convert.tuples_to_array(tuple_list_buffer)
-                    logger.debug("{}; {}".format(arr[s_] - arr[s_ - 1], arr[s_ - 1] - arr[s_ - 2]))
+            new_point = rng.uniform(-max_size, max_size, size=(1, 2))
+            shift_polygon = np.roll(polygon_points, shift=rng.integers(0, polygon_points.shape[0]))
+            polygon_points_plus = np.concatenate((shift_polygon,
+                                           new_point),axis=0)
+            linear_ring = None
+            for shift_offset in range(polygon_points.shape[0]):
+                shift_polygon = np.roll(polygon_points, shift=rng.integers(0, polygon_points.shape[0]) + shift_offset)
+                polygon_points_plus = np.concatenate((shift_polygon,
+                                           new_point), axis=0)
 
-                    angle_ = np.abs(misc.py_ang(arr[s_] - arr[s_ - 1], arr[s_ - 1] - arr[s_ - 2]))
-                    angle_ = 90 - np.abs(angle_ - 90)
-                    pointy = min(angle_, pointy)
-                    logger.debug(angle_)
-                if pointy > 15.0:
-                    logger.debug("not pointy")
-                    tuple_list = tuple_list_buffer.copy()
-
-                logger.debug("simple")
-
+                linear_ring = geometry.asLinearRing(polygon_points_plus)
+                if linear_ring.is_simple:
+                    break
+            if linear_ring.is_simple and misc.has_min_angle(polygon_points_plus, min_angle) \
+                    and misc.has_min_point_distance_batched(polygon_points_plus, min_distance):
+                logger.debug("simple&min_angle&min_point_distance")
+                polygon_points = polygon_points_plus
             else:
-                logger.debug("NOT simple")
-
-        if misc.get_spin(tuple_list) < 0:
-            logger.info("REVERSE LIST")
-            tuple_list.reverse()
-        polygon_points = tuple_list
-        logger.info("polygon_points: {}".format(polygon_points))
-        polygon_obj = geometry.Polygon(polygon_points)
-        point_array = np.array([polygon_obj.exterior.xy[0][:-1], polygon_obj.exterior.xy[1][:-1]]).transpose()
-
-        if polygon_obj.area >= min_area:
-            logger.debug("area: {}".format(polygon_obj.area))
+                logger.debug("NOT simple||min_angle||min_point_distance")
+        polygon_obj = geometry.asPolygon(polygon_points)
+        if polygon_obj.area >= min_area and misc.has_min_point_edge_distance(polygon_points, min_distance):
+            logger.debug("polygon area: {}".format(polygon_obj.area))
             break
-    return point_array, edges
+
+    logger.info("polygon_points:\n{}".format(polygon_points))
+    if not misc.get_spin(polygon_points):
+        logger.info("REVERSE LIST")
+        polygon_points = np.flip(polygon_points, axis=0)
+        logger.debug("polygon_points after spin correction:\n{}".format(polygon_points))
+
+    return polygon_points, edges
 
 
 def generate_target_regular_polygon(min_radius=3, max_radius=50, min_edges=3, max_edges=8, rotation=True,
@@ -246,3 +254,29 @@ def generate_target_star_polygon(min_radius=3, max_radius=30, edges=3, angle_eps
 #
 #     plt.show()
 #     return rphi_array
+
+   # def has_min_angles(array, min_angle):
+    #     pointy = 0.0
+    #     for s_ in range(array.shape[0]):
+    #         logger.debug("{}; {}".format(array[s_] - array[s_ - 1], array[s_ - 1] - array[s_ - 2]))
+    #         angle_ = np.abs(misc.min_angle(array[s_] - array[s_ - 1], array[s_ - 1] - array[s_ - 2]))
+    #         angle_ = 90 - np.abs(angle_ - 90)
+    #         pointy = min(angle_, min_angle)
+    #         logger.debug(angle_)
+    #     return True if pointy > min_angle else False
+    #
+    # def has_min_sides(array, min_side):
+    #     sides = array - np.roll(array, shift=1, axis=0)
+    #     minimum = np.min(np.linalg.norm(sides, axis=1))
+    #     return True if minimum > min_side else False
+
+
+
+    #
+    # def init_triangle(max_size, min_area, min_angle, min_s, rng):
+    #     while True:
+    #         tuple_list = convert.array_to_tuples(rng.uniform(-max_size, max_size, size=(3, 2)).astype(np.float32))
+    #
+    #         if polygon_obj.area >= min_area:
+    #             logger.debug("area: {}".format(polygon_obj.area))
+    #             break

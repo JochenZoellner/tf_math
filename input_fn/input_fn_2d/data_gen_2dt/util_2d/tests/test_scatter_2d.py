@@ -13,6 +13,7 @@ import input_fn.input_fn_2d.input_fn_2d_util as if2d_util
 import input_fn.input_fn_2d.data_gen_2dt.util_2d.scatter as scatter
 import input_fn.input_fn_2d.data_gen_2dt.util_2d.convert as convert
 import input_fn.input_fn_2d.data_gen_2dt.util_2d.misc as misc
+import input_fn.input_fn_2d.data_gen_2dt.util_2d.misc_tf as misc_tf
 import input_fn.input_fn_2d.data_gen_2dt.util_2d.object_generator as object_generator
 
 logger = logging.getLogger("test_scatter_2d")
@@ -60,7 +61,7 @@ class TestPolygon2DHelper(unittest.TestCase):
                                    [0.0, 0.0]])
         logger.debug("test_points:\n{}".format(test_points))
 
-        triangle_area = misc.get_area_of_triangle(points=test_points)
+        triangle_area = misc_tf.get_area_of_triangle(points=test_points)
         assert tf.is_tensor(triangle_area)
         logger.debug("triangle area: {}".format(triangle_area))
         tf.assert_equal(triangle_area, tf.constant(6.0, dtype=tf.float32), summarize=10)
@@ -81,7 +82,7 @@ class TestPolygon2DHelper(unittest.TestCase):
                                    ], dtype=tf.float64)
         logger.debug("test_points:\n{}".format(test_points))
 
-        triangle_area = misc.get_area_of_triangle(points=test_points)
+        triangle_area = misc_tf.get_area_of_triangle(points=test_points)
         assert tf.is_tensor(triangle_area)
         logger.debug("triangle area: {}".format(triangle_area))
         tf.debugging.assert_near(triangle_area, tf.constant([6.0, 24.0, 10.45], dtype=tf.float64), summarize=10)
@@ -100,7 +101,7 @@ class TestPolygon2DHelper(unittest.TestCase):
             convex_polygon_arr = tf.constant(convex_polygon_arr, dtype=tf.float64)
             phi_array = getattr(if2d_util, phi_function)(delta_phi=0.001)
             tf.config.experimental_run_functions_eagerly(run_eagerly=True)
-            polygon_calculator = scatter.ScatterCalculator2D(points=convex_polygon_arr, debug=True)
+            polygon_calculator = scatter.ScatterCalculator2D(points=convex_polygon_arr, debug=True, allow_variable_edges=True)
             polygon_scatter_res = polygon_calculator.fc_of_phi(phi=phi_array)
             logger.debug("polygon_scatter_res: {}".format(polygon_scatter_res))
 
@@ -135,7 +136,8 @@ class TestPolygon2DHelper(unittest.TestCase):
                                                 pad_width=[(0, max_edges - convex_polygon_arr.shape[0]), (0, 0)],
                                                 mode='edge').astype(np.float32)
                     # convex_polygon_tuple = convert.array_to_tuples(convex_polygon_arr)
-                    scatter_calculator_2d_tf = scatter.ScatterCalculator2D(points=convex_polygon_arr, debug=db_mode, dtype=DTYPE_TF)
+                    scatter_calculator_2d_tf = scatter.ScatterCalculator2D(points=convex_polygon_arr, debug=db_mode,
+                                                                           dtype=DTYPE_TF, allow_variable_edges=True)
 
                     if not db_mode:
                         phi_array = tf.cast(phi_array, dtype=DTYPE_TF)
@@ -149,7 +151,7 @@ class TestPolygon2DHelper(unittest.TestCase):
                     test_reference_mean = np.mean(polygon_scatter_res)
                     logger.info("test reference : {}".format(test_reference_mean))
                     scatter_polygon_2d_layer = c_layer.ScatterPolygon2D(tf.expand_dims(phi_array, axis=0),
-                                                                        with_batch_dim=False)
+                                                                        with_batch_dim=False, allow_variable_edges=True)
                     sp2dl_res = scatter_polygon_2d_layer(tf.constant(convex_polygon_arr, dtype=DTYPE_TF))
                     test_layer_mean = np.mean(sp2dl_res[0].numpy() + 1.0j * sp2dl_res[1].numpy())
                     logger.info("test Layer     : {}".format(test_layer_mean))
@@ -160,7 +162,7 @@ class TestPolygon2DHelper(unittest.TestCase):
                     convex_polygon_arr_b = tf.expand_dims(convex_polygon_arr, axis=0)
                     convex_polygon_arr_batch = tf.concat(
                         (convex_polygon_arr_b, convex_polygon_arr_b, convex_polygon_arr_b, convex_polygon_arr_b), axis=0)
-                    scatter_polygon_2d_layer_batch = c_layer.ScatterPolygon2D(fc_batch, with_batch_dim=True)
+                    scatter_polygon_2d_layer_batch = c_layer.ScatterPolygon2D(fc_batch, with_batch_dim=True, allow_variable_edges=True)
                     sp2dl_b_res = scatter_polygon_2d_layer_batch(tf.cast(convex_polygon_arr_batch, dtype=DTYPE_TF))
                     test_layerbatch_mean = np.mean(sp2dl_b_res[:, 0].numpy() + 1.0j * sp2dl_b_res[:, 1].numpy())
                     logger.info("test BatchLayer: {}".format(test_layerbatch_mean))

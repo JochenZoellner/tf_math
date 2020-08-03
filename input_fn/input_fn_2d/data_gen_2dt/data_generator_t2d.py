@@ -6,6 +6,8 @@ import util.flags as flags
 
 flags.define_boolean("sorted", False, "sort target point by x coordinate")
 flags.define_float("min_aspect_ratio", 0.1, "define the minimal aspect ratio of generated triangles")
+flags.define_float("min_distance", 2.0, "define the minimal aspect ratio of generated triangles")
+flags.define_float("min_area", 10.0, "define the minimal aspect ratio of generated triangles")
 
 
 class DataGeneratorT2D(DataGeneratorBase):
@@ -21,7 +23,8 @@ class DataGeneratorT2D(DataGeneratorBase):
         return saver.Triangle2dSaver(epsilon=flags.FLAGS.epsilon,
                                      phi_arr=tf.constant(self._phi_arr, self._dtype),
                                      x_sorted=flags.FLAGS.sorted, samples_per_file=flags.FLAGS.samples_per_file,
-                                     centered=flags.FLAGS.centered, min_aspect_ratio=flags.FLAGS.min_aspect_ratio)
+                                     centered=flags.FLAGS.centered, min_aspect_ratio=flags.FLAGS.min_aspect_ratio,
+                                     min_distance=flags.FLAGS.min_distance, min_area=flags.FLAGS.min_area)
 
     def debug(self):
         print("Debuggin in data_generator_rp")

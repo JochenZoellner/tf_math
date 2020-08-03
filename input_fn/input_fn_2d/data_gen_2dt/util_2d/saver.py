@@ -27,10 +27,12 @@ def _bytes_feature(value):
 
 class Triangle2dSaver(object):
     def __init__(self, epsilon, phi_arr, x_sorted, samples_per_file, dphi=0.001, complex_phi=False, centered=False,
-                 min_aspect_ratio=0.0):
+                 min_aspect_ratio=0.0, min_distance=0.0, min_area=10.0):
         self.epsilon = epsilon
         self.complex_phi = complex_phi  # True if a and b set via complex value of phi-python-variable
         self.centered = centered
+        self.min_distance = min_distance
+        self.min_area = min_area
         self.dphi = dphi
         self.phi_arr = phi_arr
         self.x_sorted = x_sorted
@@ -63,8 +65,10 @@ class Triangle2dSaver(object):
         fc_obj = c_layers.ScatterPolygon2D(phi_tf, epsilon=self.epsilon, dtype=D_TYPE, with_batch_dim=True)
         point_list = []
         for i in range(self.samples_per_file):
-            points = object_generator.generate_target_triangle(x_sorted=self.x_sorted,
-                                                               min_aspect_ratio=self.min_aspect_ratio)
+            points = object_generator.generate_target_triangle(x_sorted=self.x_sorted, center=self.centered,
+                                                               min_aspect_ratio=self.min_aspect_ratio,
+                                                               min_dist=self.min_distance,
+                                                               min_area=self.min_area)
             point_list.append(points)
 
         batch_points = np.stack(point_list)

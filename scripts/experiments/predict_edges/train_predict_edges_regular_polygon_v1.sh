@@ -36,3 +36,9 @@ PARAMS="
 # example call: $> sh ./tf_neiss/scripts/experiments/predict_edges/train_predict_edges_regular_polygon_v1.sh test_A rp2d_3to4edge 0 --max_edges 4
 # example call: $> sh ./tf_neiss/scripts/experiments/predict_edges/train_predict_edges_regular_polygon_v1.sh test_A rp2d_3to7edge 0 --max_edges 7
 # example call: $> sh ./tf_neiss/scripts/experiments/predict_edges/train_predict_edges_regular_polygon_v1.sh test_A rp2d_3to12edge 0 --max_edges 12
+<< ////
+# example call:
+sh ./tf_neiss/scripts/experiments/predict_edges/train_predict_edges_regular_polygon_v1.sh test_A rp2d_3to4edge 0 --max_edges 4
+sh ./tf_neiss/scripts/experiments/predict_edges/train_predict_edges_regular_polygon_v1.sh test_A rp2d_3to7edge 1 --max_edges 7
+sh ./tf_neiss/scripts/experiments/predict_edges/train_predict_edges_regular_polygon_v1.sh test_A rp2d_3to12edge 0 --max_edges 12
+////

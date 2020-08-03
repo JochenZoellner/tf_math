@@ -1,0 +1,12 @@
+# pip install -r requirements.txt
+pip>19.0
+pandas
+scipy
+Pillow
+scikit-image
+numpy>=1.17.4
+shapely
+descartes
+pytest
+PyPDF2 # merge plotted pdf's
+matplotlib
