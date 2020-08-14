@@ -6,12 +6,10 @@ import numpy as np
 import numpy.ma as npm
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 from shapely import geometry
 
-# import input_fn.input_fn_2d.data_gen_2dt.util_2d.triangle_2d_helper as t2d
-import input_fn.input_fn_2d.data_gen_2dt.util_2d.misc as misc
-import input_fn.input_fn_2d.data_gen_2dt.util_2d.scatter as scatter
-# import input_fn.input_fn_2d.data_gen_2dt.util_2d.tf_polygon_2d_helper as tf_p2d
+from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc_tf, misc, scatter
 
 import model_fn.model_fn_2d.util_2d.graphs_2d as graphs
 import model_fn.util_model_fn.losses as losses
@@ -19,6 +17,7 @@ import model_fn.util_model_fn.losses as losses
 import model_fn.util_model_fn.custom_layers as c_layer
 from model_fn.model_fn_base import ModelBase
 
+np.set_printoptions(precision=6, suppress=True)
 
 class ModelTriangle(ModelBase):
     def __init__(self, params):
@@ -33,9 +32,12 @@ class ModelTriangle(ModelBase):
         self.scatter_polygon_tf = None
         self._loss = tf.Variable(0.0, dtype=self.mydtype, trainable=False)
         self._loss_counter = tf.Variable(0, dtype=tf.int64, trainable=False)
+        self._pdf_pages = None
         # log different log types to tensorboard:
         self.metrics["train"]["loss_input_diff"] = tf.keras.metrics.Mean("loss_input_diff", self.mydtype)
         self.metrics["eval"]["loss_input_diff"] = tf.keras.metrics.Mean("loss_input_diff", self.mydtype)
+        self.metrics["train"]["loss_input_diff_normed"] = tf.keras.metrics.Mean("loss_input_diff_normed", self.mydtype)
+        self.metrics["eval"]["loss_input_diff_normed"] = tf.keras.metrics.Mean("loss_input_diff_normed", self.mydtype)
         self.metrics["train"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
         self.metrics["eval"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
         self.metrics["train"]["loss_best_point_diff"] = tf.keras.metrics.Mean("loss_best_point_diff", self.mydtype)
@@ -89,12 +91,19 @@ class ModelTriangle(ModelBase):
                                                                    with_batch_dim=True, dtype=tf.float64)
             fc = tf.cast(predictions['fc'], dtype=self.mydtype)
             pre_points = tf.cast(tf.reshape(predictions['pre_points'], [-1, 3, 2]), dtype=self.mydtype)
-            pre_points = misc.make_positiv_orientation(pre_points, dtype=self.mydtype)
+            pre_points = misc_tf.make_spin_positive(pre_points, dtype=self.mydtype)
             pre_in = tf.cast(self.scatter_polygon_tf(points_tf=pre_points), dtype=self.mydtype)
             tgt_in = fc[:, 1:, :]
             loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in, tgt_in))
             # tf.print(loss_input_diff)
-            targets_oriented = misc.make_positiv_orientation(targets["points"], dtype=self.mydtype)
+            fpre_in = tf.keras.backend.flatten(pre_in)
+            ftgt_in = tf.keras.backend.flatten(tgt_in)
+            subtract = tf.abs(tf.subtract(fpre_in, ftgt_in))
+            max_of_both = tf.maximum(tf.abs(fpre_in), tf.abs(ftgt_in))
+            add = tf.maximum(2 * max_of_both, 5.0 *tf.ones(fpre_in.shape))
+
+            loss_input_diff_normed = 10.0 * tf.reduce_mean(tf.divide(subtract, add))
+            targets_oriented = misc_tf.make_spin_positive(targets["points"], dtype=self.mydtype)
 
             loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)),
                                       self.mydtype)
@@ -109,12 +118,16 @@ class ModelTriangle(ModelBase):
             # tf.print("input_diff-loss", loss_input_diff)
             if "input_diff" in self._flags.loss_mode:
                 self._loss += loss_input_diff
+            if "input_diff_normed" in self._flags.loss_mode:
+                self._loss += loss_input_diff_normed
+
             if "point_diff" in self._flags.loss_mode:
                 self._loss += loss_point_diff
             # if "best_point_diff" in self._flags.loss_mode:
             #     self._loss += loss_best_point_diff
 
             self.metrics[self._mode]["loss_input_diff"](loss_input_diff)
+            self.metrics[self._mode]["loss_input_diff_normed"](loss_input_diff_normed)
             self.metrics[self._mode]["loss_point_diff"](loss_point_diff)
 
         # relative_loss = tf.constant(0, self.mydtype)
@@ -326,7 +339,7 @@ class ModelTriangle(ModelBase):
             # fc_arr_pre = fc_obj(pre_points)
 
             def cut_res(input_points, phi_arr):
-                input_points = tf.squeeze(misc.make_positiv_orientation(tf.expand_dims(input_points, axis=0)), axis=0).numpy()
+                input_points = tf.squeeze(misc_tf.make_spin_positive(tf.expand_dims(input_points, axis=0)), axis=0).numpy()
                 fc_res = fc_obj(input_points)
                 phi_batch = np.broadcast_to(np.expand_dims(phi_arr, axis=0),
                                             (1, 1, phi_arr.shape[0]))
@@ -335,7 +348,7 @@ class ModelTriangle(ModelBase):
                 return fc_res_cut
 
             def uncut_res(input_points, phi_arr):
-                input_points = tf.squeeze(misc.make_positiv_orientation(tf.expand_dims(input_points, axis=0)), axis=0).numpy()
+                input_points = tf.squeeze(misc_tf.make_spin_positive(tf.expand_dims(input_points, axis=0)), axis=0).numpy()
                 fc_res = fc_obj(input_points)
                 phi_batch = np.expand_dims(phi_arr, axis=0)
                 return tf.concat((phi_batch, fc_res), axis=0)
@@ -344,21 +357,41 @@ class ModelTriangle(ModelBase):
                 return np.sum(np.abs(fc_tgt - fc_pre)) / np.sum(
                         np.abs(fc_tgt) + np.abs(fc_pre))
 
+            def calc_doa_x_normed(fc_tgt, fc_pre):
+                fc_tgt = np.array(fc_tgt)
+                fc_pre = np.array(fc_pre)
+                non_zero = np.nonzero(np.abs(fc_tgt) + np.abs(fc_pre))[0].shape[0]
+                assert non_zero > 0.0, "tgt and pre vector is zero"
+                # print("tgt + pre")
+                # print(fc_tgt + fc_pre)
+                doa_normed1 = np.abs(fc_tgt - fc_pre)
+                doa_normed2 = np.maximum(np.abs(fc_tgt) + np.abs(fc_pre), np.broadcast_to(1.0, fc_tgt.shape))
+                # print("doa nomed2 \n", doa_normed2)
+                doa_normed = doa_normed1 / doa_normed2
+                # print("normed x")
+                # print(doa_normed)
+                return np.sum(doa_normed) / non_zero
+
             fc_arr_tgt_cut = cut_res(tgt_points, phi_arr)
             fc_arr_pre_cut = cut_res(pre_points, phi_arr)
 
             fc_arr_tgt = uncut_res(tgt_points, phi_arr)
             fc_arr_pre = uncut_res(pre_points, phi_arr)
 
-            doa_real_arr[i] = calc_doa_x(fc_arr_tgt[1], fc_arr_pre[1])
-            doa_imag_arr[i] = calc_doa_x(fc_arr_tgt[2], fc_arr_pre[2])
+            doa_real_arr[i] = calc_doa_x_normed(fc_arr_tgt[1], fc_arr_pre[1])
+            doa_imag_arr[i] = calc_doa_x_normed(fc_arr_tgt[2], fc_arr_pre[2])
 
-            doa_real_arr_cut[i] = calc_doa_x(fc_arr_tgt_cut[1], fc_arr_pre_cut[1])
-            doa_imag_arr_cut[i] = calc_doa_x(fc_arr_tgt_cut[2], fc_arr_pre_cut[2])
-
-            select = min_aspect_ratio_arr[i] > 0.15 and iou_arr[i] < 0.6 and doa_imag_arr_cut[i] < 0.05 and doa_real_arr_cut[i] < 0.05
+            doa_real_arr_cut[i] = calc_doa_x_normed(fc_arr_tgt_cut[1], fc_arr_pre_cut[1])
+            doa_imag_arr_cut[i] = calc_doa_x_normed(fc_arr_tgt_cut[2], fc_arr_pre_cut[2])
+            # print("target over prediction")
+            # print(fc_arr_tgt_cut[1])
+            # print(fc_arr_pre_cut[1])
+            select = iou_arr[i] < 0.50 and doa_imag_arr_cut[i] < 0.03 and doa_real_arr_cut[i] < 0.03
+            select = iou_arr[i] < 0.50 and doa_imag_arr_cut[i] < 0.08 and doa_real_arr_cut[i] < 0.08
             select = True
             PLOT = "fc"
+            if not self._pdf_pages:
+                self._pdf_pages = PdfPages(os.path.join(self._params['flags'].model_dir, "plot_summary.pdf"))
             if PLOT and select:
                 select_counter += 1
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 14))
@@ -374,17 +407,18 @@ class ModelTriangle(ModelBase):
                 if PLOT == "fc":
                     # target
                     plot_cut = False
+                    plot_cut = True
                     if plot_cut:
                         ax2.plot(fc_arr_tgt_cut[0], npm.masked_where(0 == fc_arr_tgt_cut[1], fc_arr_tgt_cut[1]), 'b-', label="real_tgt", linewidth=2)
                         ax2.plot(fc_arr_tgt_cut[0], npm.masked_where(0 == fc_arr_tgt_cut[2], fc_arr_tgt_cut[2]), 'y-', label="imag_tgt", linewidth=2)
-                        ## prediction
+                        #  prediction
                         ax2.plot(fc_arr_pre_cut[0], npm.masked_where(0 == fc_arr_pre_cut[1], fc_arr_pre_cut[1]), "g-", label="real_pre_cut", linewidth=2)
                         ax2.plot(fc_arr_pre_cut[0], npm.masked_where(0 == fc_arr_pre_cut[2], fc_arr_pre_cut[2]), "r-", label="imag_pre_cut", linewidth=2)
                         ax2.legend(loc=4)
                     else:
                         ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
                         ax2.plot(fc_arr_tgt[0], fc_arr_tgt[2], label="imag_tgt")
-                        ## prediction
+                        #  prediction
                         ax2.plot(fc_arr_pre[0], fc_arr_pre[1], label="real_pre")
                         ax2.plot(fc_arr_pre[0], fc_arr_pre[2], label="imag_pre")
 
@@ -488,7 +522,9 @@ class ModelTriangle(ModelBase):
                 pdf = os.path.join(self._params['flags'].model_dir, "single_plot_{}.pdf".format(sample_counter))
                 # svg = os.path.join(self._params['flags'].model_dir, "single_plot_{}.svg".format(sample_counter))
                 sample_counter += 1
-                fig.savefig(pdf)
+                if select_counter <= 200:
+                    # fig.savefig(pdf_pages)
+                    self._pdf_pages.savefig(fig)
                 # plt.show()
                 plt.clf()
                 plt.close()
@@ -499,25 +535,26 @@ class ModelTriangle(ModelBase):
         # print("wrong order loss: {}; correct order loss: {}; order missed: {}".format(np.nanmean(wo_loss_arr),  np.nanmean(co_loss_arr), np.count_nonzero(~np.isnan(wo_loss_arr)) ))
 
         if PLOT:
-            from PyPDF2 import PdfFileMerger
-
-            plt.close("all")
-            pdfs = [os.path.join(self._params['flags'].model_dir, "single_plot_{}.pdf".format(x)) for x in
-                    range(sample_counter)]
-            merger = PdfFileMerger()
-            for pdf in pdfs:
-                merger.append(pdf)
-            merger.write(os.path.join(self._params['flags'].model_dir, "plot_summary.pdf"))
-            merger.close()
-            for pdf in pdfs:
-                if os.path.isfile(pdf):
-                    os.remove(pdf)
-                else:
-                    logging.warning("Can not delete temporary file, result is probably incomplete!")
+            # from PyPDF2 import PdfFileMerger
+            #
+            # plt.close("all")
+            # pdfs = [os.path.join(self._params['flags'].model_dir, "single_plot_{}.pdf".format(x)) for x in
+            #         range(sample_counter)]
+            # merger = PdfFileMerger()
+            # for pdf in pdfs:
+            #     merger.append(pdf)
+            # merger.write(os.path.join(self._params['flags'].model_dir, "plot_summary.pdf"))
+            # merger.close()
+            # for pdf in pdfs:
+            #     if os.path.isfile(pdf):
+            #         os.remove(pdf)
+            #     else:
+            #         logging.warning("Can not delete temporary file, result is probably incomplete!")
+            self._pdf_pages.close()
 
     @property
     def graph_signature(self):
-        print("signature", self._flags.data_len)
-        return [{'fc': tf.TensorSpec(shape=[self._current_batch_size, 3, self._flags.data_len], dtype=tf.float32)},
-                {'points': tf.TensorSpec(shape=[self._current_batch_size, 3, 2], dtype=tf.float32)}]
-
+        gs = [{'fc': tf.TensorSpec(shape=[self._current_batch_size, 3, self._flags.data_len], dtype=tf.float32)},
+              {'points': tf.TensorSpec(shape=[self._current_batch_size, 3, 2], dtype=tf.float32)}]
+        logging.debug("Graph signature: {gs}".format(**locals()))
+        return gs

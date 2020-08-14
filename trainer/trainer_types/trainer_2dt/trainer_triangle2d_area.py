@@ -3,7 +3,7 @@ import os
 import logging
 from trainer.trainer_base import TrainerBase
 import tensorflow as tf
-import model_fn.model_fn_2d.model_fn_triangle2d_area as models
+import model_fn.model_fn_2d.model_fn_t2d_area as models
 import util.flags as flags
 from input_fn.input_fn_2d.input_fn_generator_t2d import InputFnTriangle2D
 from util.misc import get_commit_id, get_date_id

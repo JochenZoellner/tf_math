@@ -166,7 +166,9 @@ def get_area_of_triangle(points):
     abs_distances = np.linalg.norm(distances, axis=-1)
     # assert np.allclose(abs_distances, abs_distances_2)
     s = 0.5 * np.sum(abs_distances)
-    return np.sqrt(s * np.prod(s - abs_distances))
+    under_root = s * np.prod(s - abs_distances)
+    return np.sqrt(under_root) if under_root >= 0.0 else -1.0
+
 
 
 def get_min_aspect_ratio(points):

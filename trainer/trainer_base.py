@@ -18,8 +18,8 @@ flags.define_integer('epochs', 200, 'Epochs to train. If checkpoint already has 
 flags.define_integer('samples_per_epoch', 100000, 'Samples shown to the net per epoch.')
 flags.define_boolean('calc_ema', False, 'Choose whether you want to use EMA (Exponential Moving Average) '
                                         'weights or not,')
-# flags.define_float('clip_grad', 0.0, 'gradient clipping value: for positive values GLOBAL norm clipping is performed,'
-#                                      ' for negative values LOCAL norm clipping is performed (default: %(default)s)')
+flags.define_float('clip_grad', 0.0, 'gradient clipping value: for positive values GLOBAL norm clipping is performed,'
+                                     ' for negative values LOCAL norm clipping is performed (default: %(default)s)')
 flags.define_string('optimizer', 'FinalDecayOptimizer', 'the optimizer used to compute and apply gradients.')
 flags.define_dict('optimizer_params', {}, "key=value pairs defining the configuration of the optimizer.")
 flags.define_dict('input_params', {}, "key=value pairs defining the configuration of the input function."
@@ -147,7 +147,7 @@ class TrainerBase(object):
             self._model.set_optimizer()
             self._model.set_interface(self._input_fn_generator.get_input_fn_val())
             self._model.graph_train.print_params()
-            self._model.graph_train.summary()
+            # self._model.graph_train.summary()
 
         if self._flags.calc_ema:
             ema = tf.train.ExponentialMovingAverage(decay=0.999)
@@ -178,6 +178,7 @@ class TrainerBase(object):
                 self._model.graph_train._graph_out = self._model.graph_train(input_features_, training=True)
                 loss = self._model.loss(predictions=self._model.graph_train._graph_out, targets=targets_)
                 gradients = self.tape.gradient(loss, self._model.graph_train.trainable_variables)
+                gradients = self.may_clip_gradient(gradients)
                 self._model.optimizer.apply_gradients(zip(gradients, self._model.graph_train.trainable_variables))
                 self._model.graph_train.global_step.assign(self._model.optimizer.iterations)
                 self._model.graph_train._graph_out["loss"] = tf.reduce_mean(loss)
@@ -289,6 +290,18 @@ class TrainerBase(object):
                     profiler_outdir=os.path.join(self._flags.checkpoint_dir, "logs"))
             self._model.summary_writer["eval"].flush()
             # tf.summary.trace_on(graph=False, profiler=False)
+
+    @tf.function
+    def may_clip_gradient(self, gradients):
+        # print(f"clip grad: {self._flags.clip_grad}")
+        if self._flags.clip_grad > 0:
+            # gradients = [(tf.clip_by_value(grad, -self._params['flags'].clip_grad, self._params['flags'].clip_grad), var)
+            #              for grad, var in gradients if grad is not None]
+            grads, _ = tf.clip_by_global_norm(gradients, self._flags.clip_grad)
+        if self._flags.clip_grad < 0:
+            gradients = [tf.clip_by_norm(grad, -self._flags.clip_grad)
+                         for grad in gradients if grad is not None]
+        return gradients
 
 
 

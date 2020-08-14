@@ -7,8 +7,8 @@ import tensorflow as tf
 tf.config.experimental_run_functions_eagerly(True)
 import util.flags as flags
 from trainer.trainer_base import TrainerBase
-from input_fn.input_fn_2d.input_fn_generator_rp2d import InputFnPolygon2D
-import model_fn.model_fn_2d.model_fn_polygon2d_classifier as models
+from input_fn.input_fn_2d.input_fn_generator_rp2d import InputFnRegularPolygon2D
+import model_fn.model_fn_2d.model_fn_ap2d as models
 
 # Model parameter
 # ===============
@@ -32,7 +32,7 @@ flags.define_integer('max_edges', 6, "Max number of edges must be known (depends
 class TrainerPolygon2DClassifier(TrainerBase):
     def __init__(self):
         super(TrainerPolygon2DClassifier, self).__init__()
-        self._input_fn_generator = InputFnPolygon2D(self._flags)
+        self._input_fn_generator = InputFnRegularPolygon2D(self._flags)
         self._model_fn = getattr(models, self._flags.model_type)(self._params)
         self._model_fn.info()
 

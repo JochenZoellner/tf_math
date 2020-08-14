@@ -6,6 +6,8 @@ import util.flags as flags
 
 flags.define_integer("min_edges", 3, "set number minimal edges, >=3")
 flags.define_integer("max_edges", 6, "set number minimal edges, >=3")
+flags.define_float("min_angle", 20.0, "set minimum angle (to 0 or 180 degree)")
+flags.define_float("min_distance", 2.0, "set minimum distance between all points and point-side distances")
 
 
 class DataGeneratorAP2D(DataGeneratorBase):
@@ -22,7 +24,9 @@ class DataGeneratorAP2D(DataGeneratorBase):
                                              phi_arr=tf.constant(self._phi_arr, self._dtype),
                                              samples_per_file=flags.FLAGS.samples_per_file,
                                              min_edges=flags.FLAGS.min_edges,
-                                             max_edges=flags.FLAGS.max_edges)
+                                             max_edges=flags.FLAGS.max_edges,
+                                             min_angle=flags.FLAGS.min_angle,
+                                             min_distance=flags.FLAGS.min_distance)
 
     def debug(self):
         print("Debuggin in data_generator_rp")

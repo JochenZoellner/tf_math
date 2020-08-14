@@ -165,7 +165,6 @@ class GraphConv1MultiFF(Graph2D):
         self.graph_params["pre_points_out"] = True
 
         self.graph_params = update_params(self.graph_params, self._flags.graph_params, "graph")
-
         # initilize keras layer
         if self.graph_params["batch_norm"]:
             self._tracked_layers["batch_norm"] = tf.keras.layers.BatchNormalization(axis=2)

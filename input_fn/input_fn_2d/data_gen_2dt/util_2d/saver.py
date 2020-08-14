@@ -1,5 +1,6 @@
 import logging
 import sys
+import multiprocessing
 
 import numpy as np
 import tensorflow as tf
@@ -89,7 +90,8 @@ class Triangle2dSaver(object):
 
 
 class ArbitraryPolygon2dSaver(object):
-    def __init__(self, epsilon, phi_arr, samples_per_file, min_edges=3, max_edges=6, max_size=50, dtype=tf.float32):
+    def __init__(self, epsilon, phi_arr, samples_per_file, min_edges=3, max_edges=6, max_size=50,
+                 min_angle=0.0, min_distance=0.0, dtype=tf.float32):
         self.epsilon = epsilon
         self.epsilon_tf = tf.constant(epsilon, dtype=dtype)
         self.phi_arr = phi_arr
@@ -98,11 +100,15 @@ class ArbitraryPolygon2dSaver(object):
         self.max_edges = max_edges
         self.min_edges = min_edges
         self.max_size = max_size
+        self.min_angle = min_angle
+        self.min_distance = min_distance
         self._dtype = dtype
         print("  init polygon2d-saver with:")
         print("  epsilon: {}".format(self.epsilon))
         print("  max edges of polygon: {}".format(self.max_edges))
         print("  max size of polygon: {}".format(self.max_size))
+        print("  min angle: {}".format(self.min_angle))
+        print("  min distance: {}".format(self.min_distance))
         print("  len phi_arr: {}".format(len(self.phi_arr)))
         print("  dphi: {}".format(phi_arr[1] - phi_arr[0]))
         print("  samples_per_file: {}".format(self.samples_per_file))
@@ -118,27 +124,50 @@ class ArbitraryPolygon2dSaver(object):
         # Create an example protocol buffer
         return tf.train.Example(features=tf.train.Features(feature=feature_)).SerializeToString()
 
+    @staticmethod
+    def one_hot(a, num_classes):
+        return np.squeeze(np.eye(num_classes)[a.reshape(-1)])
+
+    def polygon_worker(self, i):
+        points, edges = object_generator.generate_target_polygon(max_edges=self.max_edges,
+                                                                 min_edges=self.min_edges,
+                                                                 max_size=self.max_size,
+                                                                 min_distance=self.min_distance,
+                                                                 min_angle=self.min_angle)
+
+        # print(points)
+        padded_points = np.pad(points, pad_width=[(0, self.max_edges - points.shape[0]), (0, 0)],
+                               mode='edge').astype(np.float32)
+        edges = self.one_hot(edges - 1, self.max_edges)
+        return padded_points, edges
+
     def save_file_tf(self, filename):
         point_list = []
         edges_list = []
-        for i in range(self.samples_per_file):
-            points, edges = object_generator.generate_target_polygon(max_edges=self.max_edges, min_edges=self.min_edges,
-                                                                     max_size=self.max_size)
+        # for i in range(self.samples_per_file):
+        #     points, edges = object_generator.generate_target_polygon(max_edges=self.max_edges, min_edges=self.min_edges,
+        #                                                              max_size=self.max_size, min_distance=self.min_distance, min_angle=self.min_angle)
+        #
+        #     # print(points)
+        #     padded_points = np.pad(points, pad_width=[(0, self.max_edges - points.shape[0]), (0, 0)],
+        #                            mode='edge').astype(np.float32)
+        #     # for k in padded_points:
+        #     #     print(k)
+        #     point_list.append(padded_points)
+        #
+        #     def one_hot(a, num_classes):
+        #         return np.squeeze(np.eye(num_classes)[a.reshape(-1)])
+        #
+        #     edges_list.append(one_hot(edges - 1, self.max_edges))
+        #
+        # batch_points = np.stack(point_list)
+        # batch_edges = np.stack(edges_list)
 
-            # print(points)
-            padded_points = np.pad(points, pad_width=[(0, self.max_edges - points.shape[0]), (0, 0)],
-                                   mode='edge').astype(np.float32)
-            # for k in padded_points:
-            #     print(k)
-            point_list.append(padded_points)
+        with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+            map_res = pool.map(self.polygon_worker, range(self.samples_per_file))
 
-            def one_hot(a, num_classes):
-                return np.squeeze(np.eye(num_classes)[a.reshape(-1)])
-
-            edges_list.append(one_hot(edges - 1, self.max_edges))
-
-        batch_points = np.stack(point_list)
-        batch_edges = np.stack(edges_list)
+        batch_points = [x[0]for x in map_res]
+        batch_edges = [x[1]for x in map_res]
 
         phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(self.phi_arr, self._dtype), axis=0), axis=0)
         bc_dims = [int(self.samples_per_file), 1, len(self.phi_arr)]

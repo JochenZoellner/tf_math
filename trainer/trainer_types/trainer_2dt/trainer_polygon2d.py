@@ -5,7 +5,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 import util.flags as flags
 from trainer.trainer_base import TrainerBase
 from input_fn.input_fn_2d.input_fn_generator_ap2d import InputFnPolygon2D
-import model_fn.model_fn_2d.model_fn_polygon2d as models
+import model_fn.model_fn_2d.model_fn_ap2d as models
 
 # Model parameter
 # ===============

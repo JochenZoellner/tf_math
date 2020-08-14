@@ -3,7 +3,6 @@ import os
 import shutil
 
 import numpy as np
-from itertools import permutations
 import tensorflow as tf
 
 import model_fn.model_fn_2d.util_2d.graphs_2d as graphs
@@ -11,9 +10,9 @@ from model_fn.model_fn_base import ModelBase
 from model_fn.util_model_fn.losses import batch_point3_loss, ordered_point3_loss
 
 
-class ModelPolygon(ModelBase):
+class ModelArbitraryPolygon(ModelBase):
     def __init__(self, params):
-        super(ModelPolygon, self).__init__(params)
+        super(ModelArbitraryPolygon, self).__init__(params)
         self._flags = self._params['flags']
         self._targets = None
         self._point_dist = None
