@@ -101,7 +101,8 @@ class TestPolygon2DHelper(unittest.TestCase):
             convex_polygon_arr = tf.constant(convex_polygon_arr, dtype=tf.float64)
             phi_array = getattr(if2d_util, phi_function)(delta_phi=0.001)
             tf.config.experimental_run_functions_eagerly(run_eagerly=True)
-            polygon_calculator = scatter.ScatterCalculator2D(points=convex_polygon_arr, debug=True, allow_variable_edges=True)
+            polygon_calculator = scatter.ScatterCalculator2D(points=convex_polygon_arr, debug=True,
+                                                             allow_variable_edges=True, ignore_deprecation=True)
             polygon_scatter_res = polygon_calculator.fc_of_phi(phi=phi_array)
             logger.debug("polygon_scatter_res: {}".format(polygon_scatter_res))
 
@@ -137,7 +138,8 @@ class TestPolygon2DHelper(unittest.TestCase):
                                                 mode='edge').astype(np.float32)
                     # convex_polygon_tuple = convert.array_to_tuples(convex_polygon_arr)
                     scatter_calculator_2d_tf = scatter.ScatterCalculator2D(points=convex_polygon_arr, debug=db_mode,
-                                                                           dtype=DTYPE_TF, allow_variable_edges=True)
+                                                                           dtype=DTYPE_TF, allow_variable_edges=True,
+                                                                           ignore_deprecation=True)
 
                     if not db_mode:
                         phi_array = tf.cast(phi_array, dtype=DTYPE_TF)

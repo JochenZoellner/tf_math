@@ -2,22 +2,13 @@ import logging
 import os
 import shutil
 
-import numpy as np
-import numpy.ma as npm
-import tensorflow as tf
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
-from shapely import geometry
-
-from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc_tf, misc, scatter
-
 import model_fn.model_fn_2d.util_2d.graphs_2d as graphs
-import model_fn.util_model_fn.losses as losses
-
 import model_fn.util_model_fn.custom_layers as c_layer
+import model_fn.util_model_fn.losses as losses
+import tensorflow as tf
+from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc_tf, misc
 from model_fn.model_fn_base import ModelBase
 
-np.set_printoptions(precision=6, suppress=True)
 
 class ModelTriangle(ModelBase):
     def __init__(self, params):
@@ -85,10 +76,11 @@ class ModelTriangle(ModelBase):
         self._loss = tf.constant(0.0, dtype=self.mydtype)
         if "pre_points" in predictions:
             if not self.scatter_polygon_tf:
-                self.scatter_polygon_tf = c_layer.ScatterPolygon2D(fc_tensor=tf.cast(predictions["fc"], dtype=self.mydtype),
-                                                                   points_tf=tf.cast(predictions["pre_points"],
-                                                                                     dtype=self.mydtype),
-                                                                   with_batch_dim=True, dtype=tf.float64)
+                self.scatter_polygon_tf = c_layer.ScatterPolygon2D(
+                    fc_tensor=tf.cast(predictions["fc"], dtype=self.mydtype),
+                    points_tf=tf.cast(predictions["pre_points"],
+                                      dtype=self.mydtype),
+                    with_batch_dim=True, dtype=tf.float64)
             fc = tf.cast(predictions['fc'], dtype=self.mydtype)
             pre_points = tf.cast(tf.reshape(predictions['pre_points'], [-1, 3, 2]), dtype=self.mydtype)
             pre_points = misc_tf.make_spin_positive(pre_points, dtype=self.mydtype)
@@ -96,22 +88,24 @@ class ModelTriangle(ModelBase):
             tgt_in = fc[:, 1:, :]
             loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in, tgt_in))
             # tf.print(loss_input_diff)
+
+            # input_loss_normed
             fpre_in = tf.keras.backend.flatten(pre_in)
             ftgt_in = tf.keras.backend.flatten(tgt_in)
             subtract = tf.abs(tf.subtract(fpre_in, ftgt_in))
             max_of_both = tf.maximum(tf.abs(fpre_in), tf.abs(ftgt_in))
-            add = tf.maximum(2 * max_of_both, 5.0 *tf.ones(fpre_in.shape))
-
+            add = tf.maximum(2 * max_of_both, 5.0 * tf.ones(fpre_in.shape))
             loss_input_diff_normed = 10.0 * tf.reduce_mean(tf.divide(subtract, add))
-            targets_oriented = misc_tf.make_spin_positive(targets["points"], dtype=self.mydtype)
 
+            targets_oriented = misc_tf.make_spin_positive(targets["points"], dtype=self.mydtype)
             loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)),
                                       self.mydtype)
             if tf.math.mod(self._loss_counter, tf.constant(50, dtype=tf.int64)) == tf.constant(0, dtype=tf.int64):
                 if "best_point_diff" in self._flags.loss_mode or "show_best_point_diff" in self._flags.loss_mode:
                     loss_best_point_diff = tf.cast(losses.batch_point3_loss(targets["points"],
-                                                               predictions["pre_points"],
-                                                               batch_size=self._current_batch_size), self.mydtype)
+                                                                            predictions["pre_points"],
+                                                                            batch_size=self._current_batch_size),
+                                                   self.mydtype)
                 else:
                     loss_best_point_diff = tf.constant(0.0, self.mydtype)
                 self.metrics[self._mode]["loss_best_point_diff"](loss_best_point_diff)
@@ -149,8 +143,6 @@ class ModelTriangle(ModelBase):
             self.metrics[self._mode]["loss_rmse_area"](mse_area)
             self.metrics[self._mode]["loss_mape_area"](relative_loss)
 
-
-
         # plt.figure()
         # mask_fc = np.ma.masked_where(fc[0, 0, :] == 0.0, fc[0, 0, :])
         # plt.plot(mask_fc, fc[0, 1, :], "-r", label="input_real")
@@ -184,7 +176,6 @@ class ModelTriangle(ModelBase):
         #                                   self._params["flags"].train_batch_size), dtype=tf.float32)
         # else:
         #     raise KeyError("Loss-mode: {} do not exist!".format(self._flags.loss_mode))
-
 
         # ### plot
         # fig, (ax1, ax2, ax3) = plt.subplots(nrows=3)
@@ -242,7 +233,7 @@ class ModelTriangle(ModelBase):
                 [target_dict["points"][x] for x in range(self._params['flags'].val_batch_size)])
             self._summary_object["pre_points"].extend(
                 [output_dict["pre_points"][x] for x in range(self._params['flags'].val_batch_size)])
-            if "fc" in  output_dict and  "fc" not in self._summary_object :
+            if "fc" in output_dict and "fc" not in self._summary_object:
                 self._summary_object["fc"] = output_dict["fc"]
             ob_buffer_list = []
             ub_buffer_list = []
@@ -275,282 +266,9 @@ class ModelTriangle(ModelBase):
         return area_diff_sum, tgt_area_sum
 
     def print_evaluate_summary(self):
-        sample_counter = 0
-        import matplotlib.pyplot as plt
-
-        summary_lenght = len(self._summary_object["tgt_points"])
-        print("summary length: {}".format(summary_lenght))
-
-        tgt_area_arr = np.zeros(summary_lenght)
-        pre_area_arr = np.zeros(summary_lenght)
-        pre_area_arr = np.zeros(summary_lenght)
-        min_aspect_ratio_arr = np.zeros(summary_lenght)
-        iou_arr = np.zeros(summary_lenght)
-        co_loss_arr = np.ones(summary_lenght) * np.nan
-        wo_loss_arr = np.ones(summary_lenght) * np.nan
-        doa_real_arr = np.zeros(summary_lenght)
-        doa_imag_arr = np.zeros(summary_lenght)
-        doa_real_arr_cut = np.zeros(summary_lenght)
-        doa_imag_arr_cut = np.zeros(summary_lenght)
-
-        from input_fn.input_fn_2d.input_fn_2d_util import phi_array_open_symetric_no90
-        if "fc" in self._summary_object:
-            phi_arr = self._summary_object["fc"][0][0]
-            # print("got phi_arry from summary object", phi_arr.shape)
-        else:
-            phi_arr = phi_array_open_symetric_no90(delta_phi=0.01)
-
-        phi_tf = tf.expand_dims(tf.constant(phi_arr, self.mydtype), axis=0)
-        import model_fn.util_model_fn.custom_layers as c_layers
-        fc_obj = c_layers.ScatterPolygon2D(phi_tf, dtype=self.mydtype, with_batch_dim=False)
-        from input_fn.input_fn_2d.input_fn_generator_t2d import InputFnTriangle2D
-        input_gen = InputFnTriangle2D(self._flags)
-        select_counter = 0
-        for i in range(summary_lenght):
-            if select_counter >= 200:
-                break
-            pre_points = np.reshape(self._summary_object["pre_points"][i], (3, 2))
-            tgt_points = np.reshape(self._summary_object["tgt_points"][i], (3, 2))
-
-
-            # print(pre_points)
-            # print(tgt_points)
-            pre_polygon = geometry.Polygon([pre_points[0], pre_points[1], pre_points[2]])
-            tgt_polygon = geometry.Polygon([tgt_points[0], tgt_points[1], tgt_points[2]])
-            # print(pre_points, tgt_points)
-            # print(i)
-            intersetion_area = pre_polygon.intersection(tgt_polygon).area
-            union_area = pre_polygon.union(tgt_polygon).area
-            iou_arr[i] = intersetion_area / union_area
-            tgt_area_arr[i] = tgt_polygon.area
-            pre_area_arr[i] = pre_polygon.area
-            min_aspect_ratio_arr[i] = misc.get_min_aspect_ratio(tgt_points)
-
-            # co_loss_arr[i] = self._summary_object["ordered_best"][i]
-            # wo_loss_arr[i] = self._summary_object["unordered_best"][i]
-            # PLOT = "stripes"
-            phi_arr_full = phi_array_open_symetric_no90(delta_phi=0.01)
-            # fc_arr_tgt = scatter.make_scatter_data(tgt_points, epsilon=0.002, phi_arr=phi_arr_full)
-            # fc_arr_pre = scatter.make_scatter_data(pre_points, epsilon=0.002, phi_arr=phi_arr_full)
-            # phi_batch = np.broadcast_to(np.expand_dims(phi_arr, axis=0),
-            #                             (1, 1, phi_arr.shape[0]))
-            # fc_arr_tgt = fc_obj(tgt_points)
-            # fc_arr_tgt = tf.concat((phi_batch, tf.expand_dims(fc_arr_tgt, axis=0)), axis=1)
-            # fc_arr_pre = fc_obj(pre_points)
-
-            def cut_res(input_points, phi_arr):
-                input_points = tf.squeeze(misc_tf.make_spin_positive(tf.expand_dims(input_points, axis=0)), axis=0).numpy()
-                fc_res = fc_obj(input_points)
-                phi_batch = np.broadcast_to(np.expand_dims(phi_arr, axis=0),
-                                            (1, 1, phi_arr.shape[0]))
-                d_input_points = {"fc": tf.concat((phi_batch, tf.expand_dims(fc_res, axis=0)), axis=1)}
-                fc_res_cut = tf.squeeze(input_gen.cut_phi_batch(d_input_points)["fc"], axis=0)
-                return fc_res_cut
-
-            def uncut_res(input_points, phi_arr):
-                input_points = tf.squeeze(misc_tf.make_spin_positive(tf.expand_dims(input_points, axis=0)), axis=0).numpy()
-                fc_res = fc_obj(input_points)
-                phi_batch = np.expand_dims(phi_arr, axis=0)
-                return tf.concat((phi_batch, fc_res), axis=0)
-
-            def calc_doa_x(fc_tgt, fc_pre):
-                return np.sum(np.abs(fc_tgt - fc_pre)) / np.sum(
-                        np.abs(fc_tgt) + np.abs(fc_pre))
-
-            def calc_doa_x_normed(fc_tgt, fc_pre):
-                fc_tgt = np.array(fc_tgt)
-                fc_pre = np.array(fc_pre)
-                non_zero = np.nonzero(np.abs(fc_tgt) + np.abs(fc_pre))[0].shape[0]
-                assert non_zero > 0.0, "tgt and pre vector is zero"
-                # print("tgt + pre")
-                # print(fc_tgt + fc_pre)
-                doa_normed1 = np.abs(fc_tgt - fc_pre)
-                doa_normed2 = np.maximum(np.abs(fc_tgt) + np.abs(fc_pre), np.broadcast_to(1.0, fc_tgt.shape))
-                # print("doa nomed2 \n", doa_normed2)
-                doa_normed = doa_normed1 / doa_normed2
-                # print("normed x")
-                # print(doa_normed)
-                return np.sum(doa_normed) / non_zero
-
-            fc_arr_tgt_cut = cut_res(tgt_points, phi_arr)
-            fc_arr_pre_cut = cut_res(pre_points, phi_arr)
-
-            fc_arr_tgt = uncut_res(tgt_points, phi_arr)
-            fc_arr_pre = uncut_res(pre_points, phi_arr)
-
-            doa_real_arr[i] = calc_doa_x_normed(fc_arr_tgt[1], fc_arr_pre[1])
-            doa_imag_arr[i] = calc_doa_x_normed(fc_arr_tgt[2], fc_arr_pre[2])
-
-            doa_real_arr_cut[i] = calc_doa_x_normed(fc_arr_tgt_cut[1], fc_arr_pre_cut[1])
-            doa_imag_arr_cut[i] = calc_doa_x_normed(fc_arr_tgt_cut[2], fc_arr_pre_cut[2])
-            # print("target over prediction")
-            # print(fc_arr_tgt_cut[1])
-            # print(fc_arr_pre_cut[1])
-            select = iou_arr[i] < 0.50 and doa_imag_arr_cut[i] < 0.03 and doa_real_arr_cut[i] < 0.03
-            select = iou_arr[i] < 0.50 and doa_imag_arr_cut[i] < 0.08 and doa_real_arr_cut[i] < 0.08
-            select = True
-            PLOT = "fc"
-            if not self._pdf_pages:
-                self._pdf_pages = PdfPages(os.path.join(self._params['flags'].model_dir, "plot_summary.pdf"))
-            if PLOT and select:
-                select_counter += 1
-                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 14))
-
-                ax1.fill(tgt_points.transpose()[0], tgt_points.transpose()[1], "b", pre_points.transpose()[0],
-                         pre_points.transpose()[1], "r", alpha=0.5)
-                ax1.set_aspect(1.0)
-                ax1.set_xlim(-50, 50)
-                ax1.set_ylim(-50, 50)
-
-                ax2.set_title("F(phi)")
-
-                if PLOT == "fc":
-                    # target
-                    plot_cut = False
-                    plot_cut = True
-                    if plot_cut:
-                        ax2.plot(fc_arr_tgt_cut[0], npm.masked_where(0 == fc_arr_tgt_cut[1], fc_arr_tgt_cut[1]), 'b-', label="real_tgt", linewidth=2)
-                        ax2.plot(fc_arr_tgt_cut[0], npm.masked_where(0 == fc_arr_tgt_cut[2], fc_arr_tgt_cut[2]), 'y-', label="imag_tgt", linewidth=2)
-                        #  prediction
-                        ax2.plot(fc_arr_pre_cut[0], npm.masked_where(0 == fc_arr_pre_cut[1], fc_arr_pre_cut[1]), "g-", label="real_pre_cut", linewidth=2)
-                        ax2.plot(fc_arr_pre_cut[0], npm.masked_where(0 == fc_arr_pre_cut[2], fc_arr_pre_cut[2]), "r-", label="imag_pre_cut", linewidth=2)
-                        ax2.legend(loc=4)
-                    else:
-                        ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
-                        ax2.plot(fc_arr_tgt[0], fc_arr_tgt[2], label="imag_tgt")
-                        #  prediction
-                        ax2.plot(fc_arr_pre[0], fc_arr_pre[1], label="real_pre")
-                        ax2.plot(fc_arr_pre[0], fc_arr_pre[2], label="imag_pre")
-
-                    ax2.set_xlim(0, np.pi)
-                    # target scatter
-                    # phi_3dim = np.abs(phi_arr - np.pi / 2)
-                    # fc_arr_tgt = t2d.make_scatter_data(tgt_points, phi_arr=phi_arr, epsilon=0.002)
-                    # ## prediction
-                    # fc_arr_pre = t2d.make_scatter_data(pre_points, phi_arr=phi_arr, epsilon=0.002)
-                    # for idx in range(fc_arr_tgt[2].shape[0]):
-                    #     ax2.plot((fc_arr_tgt[1][idx], fc_arr_pre[1][idx]), (fc_arr_tgt[2][idx], fc_arr_pre[2][idx]),phi_3dim[idx],  label="diffs")
-                    # #     # ax2.plot(fc_arr_tgt[1], fc_arr_tgt[2], phi_3dim,  'b', label="diffs", linewidth=0.2)
-                    # #     # ax2.plot(fc_arr_pre[1], fc_arr_pre[2], phi_3dim,  'r', label="diffs", linewidth=0.2)
-                    # #     ax2.plot(fc_arr_tgt[1], fc_arr_tgt[2], 'b', label="diffs", linewidth=0.2)
-                    # #     ax2.plot(fc_arr_pre[1], fc_arr_pre[2], 'r', label="diffs", linewidth=0.2)
-                    #     ax2.set_xlabel("real")
-                    #     ax2.set_ylabel("imag")
-                    # #     # ax2.set_zlabel("|phi-pi/2|")
-
-                ## complexphi
-                # target
-                if PLOT == "stripes":
-                    range_arr = (np.arange(10, dtype=np.float) + 1.0) / 10.0
-                    zeros_arr = np.zeros_like(range_arr, dtype=np.float)
-                    a = np.concatenate((range_arr, range_arr, zeros_arr), axis=0)
-                    b = np.concatenate((zeros_arr, range_arr, range_arr), axis=0)
-                    phi_arr = a + 1.0j * b
-                    fc_arr_tgt = scatter.make_scatter_data(tgt_points, phi_arr=phi_arr, epsilon=0.002, dphi=0.001,
-                                                       complex_phi=True)
-                    fc_arr_pre = scatter.make_scatter_data(pre_points, phi_arr=phi_arr, epsilon=0.002, dphi=0.001,
-                                                       complex_phi=True)
-                    # ax2.scatter(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
-                    for idx in range(fc_arr_tgt[2].shape[0]):
-                        ax2.plot((fc_arr_tgt[2][idx], fc_arr_pre[2][idx]), (fc_arr_pre[3][idx], fc_arr_tgt[3][idx]),
-                                 label="diffs")
-
-                # ax2.legend(loc=4)
-
-                ## for beamer neiss-kick of 2019/10/30
-                # from mpl_toolkits.axes_grid1 import Divider, Size
-                # h = [Size.Fixed(0.0), Size.Scaled(0.), Size.Fixed(.0)]
-                # v = [Size.Fixed(0.0), Size.Scaled(0.), Size.Fixed(.0)]
-                # fig = plt.figure(figsize=(10, 4))
-                # divider = Divider(fig, (0.06, 0.13, 0.35, 0.80), h, v, aspect=False)
-                # divider2 = Divider(fig, (0.55, 0.13, 0.4, 0.80), h, v, aspect=False)
-                # ax1 = plt.Axes(fig, divider.get_position())
-                # ax2 = plt.Axes(fig, divider2.get_position())
-                # ax1.annotate('', xy=(1.32, 0.3), xycoords='axes fraction', xytext=(1.05, 0.3),
-                #                 arrowprops=dict(headlength=12, headwidth=12, color='b', lw=8))
-                # ax1.annotate('', xy=(1.05, 0.6), xycoords='axes fraction', xytext=(1.326, 0.6),
-                #                 arrowprops=dict(headlength=12, headwidth=12, color='r', lw=8))
-                # ax1.annotate('', xy=(1.32, 0.1), xycoords='axes fraction', xytext=(1.05, 0.1),
-                #                 arrowprops=dict(headlength=12, headwidth=12, color='g', lw=8))
-                # fig.text(0.4, 0.42, "Berechnung",)
-                # fig.text(0.4, 0.67, "Neuronales Netz",)
-                # fig.text(0.4, 0.25, "Vergleich",)
-                # fig.add_axes(ax1)
-                # fig.add_axes(ax2)
-                # plt.rc('text', usetex=True,)
-                # plt.rc('font', family='serif', size=14)
-                # ax1.fill(tgt_points.transpose()[0], tgt_points.transpose()[1], "b", label="Ziel", alpha=0.5)
-                # ax1.fill(pre_points.transpose()[0], pre_points.transpose()[1], "r", label="Netz", alpha=0.5)
-                # fig.text(0.34, 0.78, "Ziel",bbox=dict(facecolor='blue', alpha=0.5))
-                # fig.text(0.34, 0.86, "Netz",bbox=dict(facecolor='red', alpha=0.5))
-                # ax1.set_aspect(1.0)
-                # ax1.set_xticks([-10, 0, 10])
-                # ax1.set_yticks([-10, 0, 10])
-                # ax1.set_xlim(-17, 17)
-                # ax1.set_ylim(-17, 17)
-                # ax1.set_ylabel(r'y', usetex=True)
-                # ax1.set_xlabel(r'x', usetex=True)
-                # ax2.set_ylabel(r'F', usetex=True)
-                # ax2.set_xlabel(r'$\varphi$', usetex=True)
-                # ## target
-                # fc_arr_tgt = t2d.make_scatter_data(tgt_points, epsilon=0.002, dphi=0.001)
-                # fc_arr_pre = t2d.make_scatter_data(pre_points, epsilon=0.002, dphi=0.001)
-                # norm = np.max(np.concatenate([fc_arr_tgt[1], fc_arr_tgt[2], fc_arr_pre[1], fc_arr_pre[2] ]))
-                # ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1]/norm, label="Re(F$_\mathrm{Ziel}$)")
-                # ax2.plot(fc_arr_tgt[0], fc_arr_tgt[2]/norm, label="Im(F$_\mathrm{Ziel}$)")
-                # ## prediction
-                # ax2.plot(fc_arr_pre[0], fc_arr_pre[1]/norm, label="Re(F$_\mathrm{Netz}$)")
-                # ax2.plot(fc_arr_pre[0], fc_arr_pre[2]/norm, label="Im(F$_\mathrm{Netz}$)")
-                # ax2.set_yticks([0, 1])
-                # ax2.set_xticks([0, np.pi/2, np.pi])
-                # ax2.set_xticklabels(["0", "$\pi/2$", "$\pi$"])
-                # ax2.legend(loc=2)
-
-                ax1.set_title("(red) pre: P1={:3.2f},{:3.2f}|P2={:3.2f},{:3.2f}|P3={:3.2f},{:3.2f}\n"
-                              "(blue)tgt: P1={:3.2f},{:3.2f}|P2={:3.2f},{:3.2f}|P3={:3.2f},{:3.2f}\n"
-                              "IoU: {:1.2f}; MAR {:0.2f}\n"
-                              "DoA (real)    {:1.2f}; DoA (imag)    {:1.2f}\n"
-                              "DoA_cut(real) {:1.2f}; DoA_cut(imag) {:1.2f}".format(
-                    pre_points[0][0], pre_points[0][1], pre_points[1][0],
-                    pre_points[1][1], pre_points[2][0], pre_points[2][1],
-                    tgt_points[0][0], tgt_points[0][1], tgt_points[1][0],
-                    tgt_points[1][1], tgt_points[2][0], tgt_points[2][1],
-                    intersetion_area / union_area, min_aspect_ratio_arr[i],
-                    doa_real_arr[i], doa_imag_arr[i],
-                    doa_real_arr_cut[i], doa_imag_arr_cut[i]))
-                plt.grid()
-                pdf = os.path.join(self._params['flags'].model_dir, "single_plot_{}.pdf".format(sample_counter))
-                # svg = os.path.join(self._params['flags'].model_dir, "single_plot_{}.svg".format(sample_counter))
-                sample_counter += 1
-                if select_counter <= 200:
-                    # fig.savefig(pdf_pages)
-                    self._pdf_pages.savefig(fig)
-                # plt.show()
-                plt.clf()
-                plt.close()
-        print("selected: {}".format(select_counter))
-        print("mean iou: {}".format(np.mean(iou_arr)))
-        print("sum tgt area: {}; sum pre area: {}; p/t-area: {}".format(np.mean(tgt_area_arr), np.mean(pre_area_arr),
-                                                                        np.sum(pre_area_arr) / np.sum(tgt_area_arr)))
-        # print("wrong order loss: {}; correct order loss: {}; order missed: {}".format(np.nanmean(wo_loss_arr),  np.nanmean(co_loss_arr), np.count_nonzero(~np.isnan(wo_loss_arr)) ))
-
-        if PLOT:
-            # from PyPDF2 import PdfFileMerger
-            #
-            # plt.close("all")
-            # pdfs = [os.path.join(self._params['flags'].model_dir, "single_plot_{}.pdf".format(x)) for x in
-            #         range(sample_counter)]
-            # merger = PdfFileMerger()
-            # for pdf in pdfs:
-            #     merger.append(pdf)
-            # merger.write(os.path.join(self._params['flags'].model_dir, "plot_summary.pdf"))
-            # merger.close()
-            # for pdf in pdfs:
-            #     if os.path.isfile(pdf):
-            #         os.remove(pdf)
-            #     else:
-            #         logging.warning("Can not delete temporary file, result is probably incomplete!")
-            self._pdf_pages.close()
+        import model_fn.model_fn_2d.util_2d.plot_t2d as plt_fn
+        spt_obj = plt_fn.SummaryPlotterTriangle(summary_object=self._summary_object, flags=self._flags)
+        spt_obj.process()
 
     @property
     def graph_signature(self):

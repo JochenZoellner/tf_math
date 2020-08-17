@@ -3,6 +3,8 @@ import logging
 import numpy as np
 import tensorflow as tf
 from shapely import geometry
+from deprecated import deprecated
+
 
 logger = logging.getLogger("util_2d/scatter.py")
 
@@ -14,14 +16,17 @@ if __name__ == "__main__":
 # logger.setLevel("DEBUG")
 # logger.setLevel("INFO")
 
-
+@deprecated
 class ScatterCalculator2D:
-    def __init__(self, points, epsilon=np.array(0.0001), debug=False, dtype=tf.float64, allow_variable_edges=False):
+    def __init__(self, points, epsilon=np.array(0.0001), debug=False, dtype=tf.float64, allow_variable_edges=False,
+                 ignore_deprecation=False):
         """points is tensor with shape [3x2]
         numpy and tensorflow implementation for debuggging purpose
         DO NOT USE, use Keras layer object instead.
         not graph mode compatible
         no batch support"""
+        if not ignore_deprecation:
+            raise DeprecationWarning("use model_fn/util_model_fn.ScatterPolygon2D instead")
         self.logger = logging.getLogger("ScatterCalculator2D")
         self.dtype = dtype
         self.allow_variable_edges = allow_variable_edges

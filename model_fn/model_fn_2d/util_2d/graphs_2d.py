@@ -1,10 +1,7 @@
-import tensorflow as tf
-
 import model_fn.util_model_fn.keras_compatible_layers as layers
+import tensorflow as tf
 from model_fn.graph_base import GraphBase
 from util.flags import update_params
-import matplotlib.pyplot as plt
-import numpy as np
 
 
 class Graph2D(GraphBase):
@@ -23,38 +20,6 @@ class Graph2D(GraphBase):
             print("  {}: {}".format(j, self.graph_params[j]))
 
 
-class KerasGraphFF3(Graph2D):
-    def __init__(self, params):
-        super(KerasGraphFF3, self).__init__(params)
-        # declare graph_params and update from dict --graph_params
-        self.graph_params["ff_hidden_1"] = 128
-        self.graph_params["ff_hidden_2"] = 128
-        self.graph_params["ff_hidden_3"] = 128
-        self.graph_params = update_params(self.graph_params, self._flags.graph_params, "graph")
-        # initilize keras layer
-        self._tracked_layers["flatten_1"] = tf.keras.layers.Flatten()
-        self._tracked_layers["ff_layer_1"] = tf.keras.layers.Dense(self.graph_params["ff_hidden_1"],
-                                                                   activation=tf.nn.leaky_relu, name="ff_layer_1")
-        self._tracked_layers["ff_layer_2"] = tf.keras.layers.Dense(self.graph_params["ff_hidden_2"],
-                                                                   activation=tf.nn.leaky_relu, name="ff_layer_2")
-        self._tracked_layers["ff_layer_3"] = tf.keras.layers.Dense(self.graph_params["ff_hidden_3"],
-                                                                   activation=tf.nn.leaky_relu, name="ff_layer_3")
-        self._tracked_layers["last_layer"] = tf.keras.layers.Dense(6, activation=None, name="last_layer")
-        self._tracked_layers["flatten_2"] = tf.keras.layers.Flatten()
-
-    @tf.function
-    def call(self, inputs, training=None, mask=None):
-        # connect keras layers
-        flatten_out = self._tracked_layers["flatten_1"](inputs["fc"])
-        ff_layer_1_out = self._tracked_layers["ff_layer_1"](flatten_out)
-        ff_layer_2_out = self._tracked_layers["ff_layer_2"](ff_layer_1_out)
-        ff_layer_3_out = self._tracked_layers["ff_layer_3"](ff_layer_2_out)
-        last_layer_out = self._tracked_layers["last_layer"](ff_layer_3_out)
-        final_out = self._tracked_layers["flatten_2"](last_layer_out)
-        self._graph_out = {"pre_points": final_out, "pre_points2": final_out}
-        return self._graph_out
-
-
 class GraphMultiFF(Graph2D):
     def __init__(self, params):
         super(GraphMultiFF, self).__init__(params)
@@ -63,7 +28,7 @@ class GraphMultiFF(Graph2D):
             self.fc_size_0 = 3
         else:
             self.fc_size_0 = 4
-        self.graph_params["dense_layers"] = [512,1024,1024,256,128,64,32]
+        self.graph_params["dense_layers"] = [512, 1024, 1024, 256, 128, 64, 32]
         self.graph_params["input_dropout"] = 0.0
         self.graph_params["ff_dropout"] = 0.0
         self.graph_params["uniform_noise"] = 0.0
@@ -73,13 +38,11 @@ class GraphMultiFF(Graph2D):
         self.graph_params["batch_norm"] = False
         self.graph_params["nhidden_max_edges"] = 6
         self.graph_params["pre_activation"] = None
+        self.graph_params["pre_points_out"] = True
 
         self.graph_params = update_params(self.graph_params, self._flags.graph_params, "graph")
 
         # initilize keras layer
-
-
-
         if self.graph_params["batch_norm"]:
             self._tracked_layers["batch_norm"] = tf.keras.layers.BatchNormalization(axis=2)
             if self.global_epoch >= 2:
@@ -90,9 +53,10 @@ class GraphMultiFF(Graph2D):
             name = "ff_{}".format(layer_index + 1)
             self._tracked_layers[name] = tf.keras.layers.Dense(n_hidden, activation=tf.nn.leaky_relu, name=name)
 
-        self._tracked_layers["ff_final"] = tf.keras.layers.Dense(self.graph_params["nhidden_dense_final"],
-                                                                 activation=None, name="ff_final")
-
+        # maybe add output layers
+        if self.graph_params["pre_points_out"]:
+            self._tracked_layers["ff_final"] = tf.keras.layers.Dense(self.graph_params["nhidden_dense_final"],
+                                                                     activation=None, name="ff_final")
         if self.graph_params["edge_classifier"]:
             self._tracked_layers["edge_classifier"] = tf.keras.layers.Dense(self.graph_params["nhidden_max_edges"],
                                                                             activation=tf.nn.softmax,
@@ -133,12 +97,13 @@ class GraphMultiFF(Graph2D):
                 ff_in += tf.random.normal(tf.shape(ff_in), stddev=self.graph_params["normal_noise"])
 
         ff_final = self._tracked_layers["ff_final"](ff_in)
-        self._graph_out = {"pre_points": ff_final, "fc": inputs["fc"]}
-        edge_final = None
+        self._graph_out = {"fc": inputs["fc"]}
+        if self.graph_params["pre_points_out"]:
+            ff_final = self._tracked_layers["ff_final"](ff_in)
+            self._graph_out["pre_points"] = ff_final
         if self.graph_params["edge_classifier"]:
             edge_final = self._tracked_layers["edge_classifier"](ff_final)
-
-            self._graph_out = {"pre_points": ff_final, "e_pred": edge_final, "fc": inputs["fc"]}
+            self._graph_out = {"e_pred": edge_final}
 
         return self._graph_out
 
@@ -151,7 +116,7 @@ class GraphConv1MultiFF(Graph2D):
             self.fc_size_0 = 3
         else:
             self.fc_size_0 = 4
-        self.graph_params["dense_layers"] = [512,1024,1024,256,128,64,32]
+        self.graph_params["dense_layers"] = [512, 1024, 1024, 256, 128, 64, 32]
         self.graph_params["input_dropout"] = 0.0
         self.graph_params["ff_dropout"] = 0.0
         self.graph_params["uniform_noise"] = 0.0
@@ -160,9 +125,10 @@ class GraphConv1MultiFF(Graph2D):
         self.graph_params["edge_classifier"] = False
         self.graph_params["batch_norm"] = False
         self.graph_params["nhidden_max_edges"] = 6
-        self.graph_params["pre_activation"] = None
+        self.graph_params["ff_activation"] = "leaky_relu"
         self.graph_params["pre_area"] = False
         self.graph_params["pre_points_out"] = True
+        ff_activation = getattr(tf.nn, self.graph_params["ff_activation"])
 
         self.graph_params = update_params(self.graph_params, self._flags.graph_params, "graph")
         # initilize keras layer
@@ -172,16 +138,16 @@ class GraphConv1MultiFF(Graph2D):
                 self._tracked_layers["batch_norm"].trainable = True
         self._tracked_layers["conv_1"] = tf.keras.layers.Conv1D(filters=4, kernel_size=8,
                                                                 padding="same",
-                                                                strides=2, activation=tf.nn.leaky_relu)
+                                                                strides=2, activation=ff_activation)
         self._tracked_layers["flatten_1"] = tf.keras.layers.Flatten()
         # loop over all number in self.graph_params["dense_layers"]
         for layer_index, n_hidden in enumerate(self.graph_params["dense_layers"]):
             name = "ff_{}".format(layer_index + 1)
             self._tracked_layers[name] = tf.keras.layers.Dense(n_hidden, activation=tf.nn.leaky_relu, name=name)
-
+        # maybe add output layers
         if self.graph_params["pre_points_out"]:
             self._tracked_layers["ff_final"] = tf.keras.layers.Dense(self.graph_params["nhidden_dense_final"],
-                                                                 activation=None, name="ff_final")
+                                                                     activation=None, name="ff_final")
 
         if self.graph_params["edge_classifier"]:
             self._tracked_layers["edge_classifier"] = tf.keras.layers.Dense(self.graph_params["nhidden_max_edges"],
@@ -194,31 +160,18 @@ class GraphConv1MultiFF(Graph2D):
 
     @tf.function
     def call(self, inputs, training=False, build=None):
-        # plt.figure(1)
-        # fc = inputs["fc"]
-        # fc = np.ma.masked_where(np.broadcast_to(fc[:, :1, ] == 0.0, shape=(fc.shape[0], 3, fc.shape[2])), fc)
-        # plt.plot(fc[0, 0], fc[0, 1], label="real")
-        # plt.plot(fc[0, 0], fc[0, 2], label="imag")
-        # plt.show()
 
         ff_in = inputs["fc"][:, 1:]
-        # tf.print(ff_in.shape)
         if self.graph_params["pre_activation"]:
             ff_in = getattr(layers, self.graph_params["pre_activation"])(ff_in)
         if self.graph_params["batch_norm"]:
             ff_in = self._tracked_layers["batch_norm"](ff_in, training)
-        ff_in_shape = tf.shape(ff_in)
         prepare_conv = tf.transpose(ff_in, [0, 2, 1])
-        prepare_conv  = tf.expand_dims(self._tracked_layers["flatten_1"](prepare_conv),axis=-1)
+        prepare_conv = tf.expand_dims(self._tracked_layers["flatten_1"](prepare_conv), axis=-1)
         conv_1_res = self._tracked_layers["conv_1"](prepare_conv)
         conv_1_reshaped = tf.transpose(conv_1_res, [0, 2, 1])
 
         ff_in = tf.concat((ff_in, conv_1_reshaped), axis=1)
-
-        # plt.figure(2)
-        # plt.plot(fc[0, 0], ff_in[0, 0], label="real")
-        # plt.plot(fc[0, 0], ff_in[0, 1], label="imag")
-        # plt.show()
 
         ff_in = self._tracked_layers["flatten_1"](ff_in)
 
@@ -249,6 +202,40 @@ class GraphConv1MultiFF(Graph2D):
 
 
 # <editor-fold desc="unmaintened graphs">
+
+
+# class KerasGraphFF3(Graph2D):
+#     def __init__(self, params):
+#         super(KerasGraphFF3, self).__init__(params)
+#         # declare graph_params and update from dict --graph_params
+#         self.graph_params["ff_hidden_1"] = 128
+#         self.graph_params["ff_hidden_2"] = 128
+#         self.graph_params["ff_hidden_3"] = 128
+#         self.graph_params = update_params(self.graph_params, self._flags.graph_params, "graph")
+#         # initilize keras layer
+#         self._tracked_layers["flatten_1"] = tf.keras.layers.Flatten()
+#         self._tracked_layers["ff_layer_1"] = tf.keras.layers.Dense(self.graph_params["ff_hidden_1"],
+#                                                                    activation=tf.nn.leaky_relu, name="ff_layer_1")
+#         self._tracked_layers["ff_layer_2"] = tf.keras.layers.Dense(self.graph_params["ff_hidden_2"],
+#                                                                    activation=tf.nn.leaky_relu, name="ff_layer_2")
+#         self._tracked_layers["ff_layer_3"] = tf.keras.layers.Dense(self.graph_params["ff_hidden_3"],
+#                                                                    activation=tf.nn.leaky_relu, name="ff_layer_3")
+#         self._tracked_layers["last_layer"] = tf.keras.layers.Dense(6, activation=None, name="last_layer")
+#         self._tracked_layers["flatten_2"] = tf.keras.layers.Flatten()
+#
+#     @tf.function
+#     def call(self, inputs, training=None, mask=None):
+#         # connect keras layers
+#         flatten_out = self._tracked_layers["flatten_1"](inputs["fc"])
+#         ff_layer_1_out = self._tracked_layers["ff_layer_1"](flatten_out)
+#         ff_layer_2_out = self._tracked_layers["ff_layer_2"](ff_layer_1_out)
+#         ff_layer_3_out = self._tracked_layers["ff_layer_3"](ff_layer_2_out)
+#         last_layer_out = self._tracked_layers["last_layer"](ff_layer_3_out)
+#         final_out = self._tracked_layers["flatten_2"](last_layer_out)
+#         self._graph_out = {"pre_points": final_out, "pre_points2": final_out}
+#         return self._graph_out
+
+
 # class GraphConv2FF6LSTM2(GraphT2D):
 #     def __init__(self, params):
 #         super(GraphConv2FF6LSTM2, self).__init__(params)

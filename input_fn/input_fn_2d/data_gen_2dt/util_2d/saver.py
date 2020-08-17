@@ -1,15 +1,16 @@
 import logging
-import sys
 import multiprocessing
+import sys
 
-import numpy as np
-import tensorflow as tf
-
-import input_fn.input_fn_2d.data_gen_2dt.util_2d.misc as misc
 import input_fn.input_fn_2d.data_gen_2dt.util_2d.object_generator as object_generator
 import model_fn.util_model_fn.custom_layers as c_layers
+import numpy as np
+import tensorflow as tf
+from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc_tf
 
 logger = logging.getLogger(__name__)
+
+
 # logger.setLevel(level="DEBUG")
 
 
@@ -73,7 +74,7 @@ class Triangle2dSaver(object):
             point_list.append(points)
 
         batch_points = np.stack(point_list)
-        batch_points = misc.make_positiv_orientation(batch_points).numpy()
+        batch_points = misc_tf.make_spin_positive(batch_points).numpy()
         fc_arr = fc_obj(batch_points)
 
         with tf.io.TFRecordWriter(filename) as writer:
@@ -166,8 +167,8 @@ class ArbitraryPolygon2dSaver(object):
         with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
             map_res = pool.map(self.polygon_worker, range(self.samples_per_file))
 
-        batch_points = [x[0]for x in map_res]
-        batch_edges = [x[1]for x in map_res]
+        batch_points = [x[0] for x in map_res]
+        batch_edges = [x[1] for x in map_res]
 
         phi_tf = tf.expand_dims(tf.expand_dims(tf.constant(self.phi_arr, self._dtype), axis=0), axis=0)
         bc_dims = [int(self.samples_per_file), 1, len(self.phi_arr)]

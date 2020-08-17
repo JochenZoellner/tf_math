@@ -1,4 +1,5 @@
 import os
+
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 import model_fn.model_fn_2d.model_fn_2dtriangle as model_fn_classes
 import util.flags as flags
@@ -14,6 +15,8 @@ flags.define_boolean('complex_phi', False, "if set: a=phi.real, b=phi.imag, inst
                                            "additional flag need for specific input_fn, model, graph")
 flags.define_string('loss_mode', 'input_diff', 'switch loss calculation, see model_fn_2dtriangle.py')
 flags.define_boolean('plot', False, "plot results in pdf file, (slow)")
+flags.define_dict('plot_params', {}, "key=value pairs defining what to plot in model_fn_2d_triangle "
+                                     "in evaluate_summary.")
 flags.FLAGS.parse_flags()
 
 
