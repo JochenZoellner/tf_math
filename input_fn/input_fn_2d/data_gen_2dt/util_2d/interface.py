@@ -9,10 +9,19 @@ class InterfaceBase2D(object):
         self._padding_tuple = None
 
     def get_shape_tuple(self):
+        if not self._shape_tuple:
+            raise NotImplementedError("shape_tuple is {}.".format(self._shape_tuple))
         return self._shape_tuple
 
     def get_padding_tuple(self):
+        if not self._padding_tuple:
+            raise NotImplementedError("padding_tuple is {}.".format(self._padding_tuple))
         return self._padding_tuple
+
+    def get_type_tuple(self):
+        if not self._type_tuple:
+            raise NotImplementedError("type_tuple is {}.".format(self._type_tuple))
+        return self._type_tuple
 
     # def parse_proto(self, example_proto):
     #     assert self._shape_tuple
@@ -46,6 +55,8 @@ class InterfaceTriangle2D(InterfaceBase2D):
                              {'points': [3, 2]})
         self._padding_tuple = ({'fc': tf.constant(0, dtype=tf.float32)},
                                {'points': tf.constant(0, dtype=tf.float32)})
+
+        self._type_tuple = ({"fc": tf.float32}, {"points": tf.float32})
 
     def parse_proto(self, example_proto):
         """
@@ -86,6 +97,13 @@ class InterfaceRegularPolygon2D(InterfaceBase2D):
                                 'translation': tf.constant(0, dtype=tf.float32),
                                 'edges': tf.constant(0, dtype=tf.float32),
                                 'points': tf.constant(0, dtype=tf.float32)})
+
+        self._type_tuple = ({'fc': tf.float32},
+                            {'radius': tf.float32,
+                             'rotation': tf.float32,
+                             'translation': tf.float32,
+                             'edges': tf.float32,
+                             'points': tf.float32})
 
     def parse_proto(self, example_proto):
         """
@@ -131,6 +149,9 @@ class InterfaceArbitraryPolygon2D(InterfaceBase2D):
         self._padding_tuple = ({'fc': tf.constant(0, dtype=tf.float32)},
                                {'edges': tf.constant(0, dtype=tf.float32),
                                 'points': tf.constant(0, dtype=tf.float32)})
+        self._type_tuple = ({'fc': tf.float32},
+                            {'edges': tf.float32,
+                             'points': tf.float32})
 
     def parse_proto(self, example_proto):
         """

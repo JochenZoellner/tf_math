@@ -1,6 +1,5 @@
-import tensorflow as tf
 import numpy as np
-import input_fn.input_fn_2d.data_gen_2dt.util_2d.interface as interface
+import tensorflow as tf
 from input_fn.input_fn_generator_base import InputFnBase
 
 
@@ -13,6 +12,8 @@ class InputFn2D(InputFnBase):
         self._next_batch = None
         self.dataset = None
         self._interface_obj = None
+        self._input_params["min_fov"] = 0.0
+        self._input_params["max_fov"] = 180.0
 
     def cut_phi_batch(self, batch, min_fov=None, max_fov=None):
         """
@@ -23,10 +24,10 @@ class InputFn2D(InputFnBase):
         :return:
         """
         if not min_fov:
-            min_fov = self._input_params["min_fov"]
+            min_fov = float(self._input_params["min_fov"])
 
         if not max_fov:
-            max_fov = self._input_params["max_fov"]
+            max_fov = float(self._input_params["max_fov"])
         phi_vec = batch["fc"][0, 0, :]
         max_fov = max_fov / 180.0 * np.pi  # max_angle_of_view_cut_rad
         min_fov = min_fov / 180.0 * np.pi  # hole
@@ -40,13 +41,13 @@ class InputFn2D(InputFnBase):
 
         return batch
 
-    # @tf.function(input_signature=[tf.TensorSpec([None, None, None], tf.float32)])
     def tf_cut_phi_batch(self, feature_dict, target_dict):
         return self.cut_phi_batch(feature_dict), target_dict
 
     def map_and_batch(self, raw_dataset, batch_size):
         parsed_dataset = raw_dataset.map(self._interface_obj.parse_proto)
         parsed_dataset_batched = parsed_dataset.batch(batch_size)
+        parsed_dataset_batched = parsed_dataset_batched.map(self.tf_cut_phi_batch)
         return parsed_dataset_batched
 
     def get_input_fn_train(self):
@@ -56,7 +57,7 @@ class InputFn2D(InputFnBase):
             train_filepath_list = [x.strip("\n") for x in tr_fobj.readlines()]
         raw_dataset = tf.data.TFRecordDataset(train_filepath_list)
         parsed_dataset_batched = self.map_and_batch(raw_dataset, self._flags.train_batch_size)
-        # parsed_dataset = parsed_dataset.shuffle(buffer_size=1000)
+        parsed_dataset_batched = parsed_dataset_batched.shuffle(buffer_size=self._flags.train_batch_size * 10)
 
         self.dataset = parsed_dataset_batched.repeat()
         return self.dataset.prefetch(5)

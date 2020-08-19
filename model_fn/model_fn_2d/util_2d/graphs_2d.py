@@ -126,6 +126,7 @@ class GraphConv1MultiFF(Graph2D):
         self.graph_params["batch_norm"] = False
         self.graph_params["nhidden_max_edges"] = 6
         self.graph_params["ff_activation"] = "leaky_relu"
+        self.graph_params["pre_activation"] = None
         self.graph_params["pre_area"] = False
         self.graph_params["pre_points_out"] = True
         ff_activation = getattr(tf.nn, self.graph_params["ff_activation"])

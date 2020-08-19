@@ -241,6 +241,10 @@ class StoreDictKeyPair(argparse.Action):
         except ValueError:
             return False
 
+    def is_list(self, string):
+        s = string.strip()
+        return s[0] == '[' and s[-1] == ']'
+
     def str_is_true(self, v):
         return v.lower() in ('true', 't')
 
@@ -265,6 +269,21 @@ class StoreDictKeyPair(argparse.Action):
                     f = float(val)
                     i = int(f)
                     val = i if i == f else f
+                elif self.is_list(val):
+                    list_vals = val.strip()[1:-1].split(",")  # remove parantheses and split into elements
+                    list_vals = [element.strip() for element in list_vals]  # remove leading/trailing spaces of elements
+                    val = []
+                    for element in list_vals:
+                        # convert elements to type
+                        if self.str_is_true(element):
+                            element = True
+                        elif self.str_is_false(element):
+                            element = False
+                        elif self.is_number(element):
+                            f = float(element)
+                            i = int(f)
+                            element = i if i == f else f
+                        val.append(element)
                 # update the dict
                 getattr(namespace, self.dest).update({key: val})
 
@@ -288,7 +307,7 @@ def update_params(class_params, flag_params, name="", print_params=False):
     """update a dictionary holding various parameter (int, float, bool, list) using (a 'flag' containing) a dictionary
     - all keyes from 'flag_params'should be in 'class_params or a critical warning is printed
     - use print_params=True to print out what happens within
-    - passing a list e.g. --graph_params dense_layers=[128,256,64] (no spaces, with [] to handle ist as list
+    - passing a list e.g. --graph_params dense_layers=[128,256,64] (no spaces, with [] to handle it as list
     Args:
         class_params: dictionary which is returned, with updated entries
         flag_params: dictionary from which the update is made, should only contain key allready class_params:
@@ -309,34 +328,34 @@ def update_params(class_params, flag_params, name="", print_params=False):
         if i not in class_params:
             logging.critical("Given {0}_params-key '{1}' is not used by {0}-class!".format(name, i))
 
-    list_params = []  # save keys with type list for later
-    for j in class_params:
-        # print(j, type(self.netparams[j]))
-        if isinstance(class_params[j], (list,)):
-            list_params.append(j)
-            # print(list_params)
+    # list_params = []  # save keys with type list for later
+    # for j in class_params:
+    #     # print(j, type(self.netparams[j]))
+    #     if isinstance(class_params[j], (list,)):
+    #         list_params.append(j)
+    #         # print(list_params)
 
     class_params.update(flag_params)
 
-    for j in flag_params:  # check if key with type list should be updated, cast given string to list
-        if j in list_params:
-            logging.info("//// Flags handling: cast {} to list".format(j))
-            assert isinstance(flag_params[j], str)
-            # remove outer bracket [] if exists
-            if flag_params[j][0] == "[" and flag_params[j][-1] == "]":
-                current_item = flag_params[j][1:-1].split(",")
-            else:
-                current_item = flag_params[j].split(",")
-            try:
-                # Integer Case
-                class_params[j] = [int(x) for x in current_item]
-            except:
-                try:
-                    # float Case
-                    class_params[j] = [float(x) for x in current_item]
-                except:
-                    # If int/float cases fail, make it string...
-                    class_params[j] = [x for x in current_item]
+    # for j in flag_params:  # check if key with type list should be updated, cast given string to list
+    #     if j in list_params:
+    #         logging.info("//// Flags handling: cast {} to list".format(j))
+    #         assert isinstance(flag_params[j], str)
+    #         # remove outer bracket [] if exists
+    #         if flag_params[j][0] == "[" and flag_params[j][-1] == "]":
+    #             current_item = flag_params[j][1:-1].split(",")
+    #         else:
+    #             current_item = flag_params[j].split(",")
+    #         try:
+    #             # Integer Case
+    #             class_params[j] = [int(x) for x in current_item]
+    #         except:
+    #             try:
+    #                 # float Case
+    #                 class_params[j] = [float(x) for x in current_item]
+    #             except:
+    #                 # If int/float cases fail, make it string...
+    #                 class_params[j] = [x for x in current_item]
 
     if print_params:
         print("updated {}_params:".format(name))

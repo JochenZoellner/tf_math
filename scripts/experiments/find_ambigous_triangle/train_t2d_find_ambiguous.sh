@@ -12,7 +12,7 @@ DATASET="t2d_find_ambiguous"
 DATALEN=312
 
 mkdir -p models/dataset_${DATASET}
-
+# ToDo replace val with train
 PARAMS="
   --train_lists lists/${DATASET}_train.lst
   --val_list lists/${DATASET}_val.lst
@@ -29,7 +29,7 @@ PARAMS="
   --optimizer_params learning_rate=0.001 lr_decay_rate=0.95
   --gpu_devices ${GPU}
 "
-CUDA_VISIBLE_DEVICES="" TS_SOCKET=${QUEUE} PYTHONPATH=$(pwd)/tf_neiss:$PYTHONPATH python -u ./tf_neiss/trainer/trainer_types/trainer_2dt/trainer_triangle2d_area.py ${PARAMS} "$@"
+CUDA_VISIBLE_DEVICES="" TS_SOCKET=${QUEUE} PYTHONPATH=$(pwd)/tf_neiss:$PYTHONPATH tsp python -u ./tf_neiss/trainer/trainer_types/trainer_2dt/trainer_triangle2d.py ${PARAMS} "$@"
 
 <<////
 # example call:
