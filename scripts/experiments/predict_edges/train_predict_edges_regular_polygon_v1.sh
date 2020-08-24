@@ -17,12 +17,13 @@ PARAMS="
     --val_list lists/${DATASET}_val.lst \
     --checkpoint_dir models/${DATASET}/${ID} \
     --optimizer_params learning_rate=0.0001 \
-    --val_batch_size 1000\
+    --val_batch_size 1000 \
     --calc_ema True \
     --data_len 312 \
     --epochs ${EPOCH} \
     --delete_event_files False \
     --model_type ModelPolygonClassifier \
+    --input_type InputFnRegularPolygon2D \
     --graph GraphConv1MultiFF \
     --max_edges 12 \
     --loss_mode softmax_crossentropy \

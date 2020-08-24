@@ -51,7 +51,7 @@ class ModelPolygonClassifier(ModelBase):
         self._loss = tf.constant(0.0, dtype=self.mydtype)
 
         if 'softmax_cross_entropy' in self._flags.loss_mode:
-            loss_edge = tf.reduce_mean(tf.compat.v1.losses.softmax_cross_entropy(targets['edges'],
+            loss_edge = tf.reduce_mean(tf.keras.losses.categorical_crossentropy(targets['edges'],
                                                                                  predictions['e_pred']))
             self._loss += loss_edge
             self.metrics[self._mode]["loss_cross_entropy_edges"](loss_edge)
@@ -59,11 +59,11 @@ class ModelPolygonClassifier(ModelBase):
             logging.error("no valid loss-mode in loss_params")
             raise AttributeError
 
-        equal_tensor = tf.equal(tf.argmax(predictions['e_pred']), tf.argmax(targets['edges']))
+        equal_tensor = tf.equal(tf.argmax(predictions['e_pred'], axis=-1), tf.argmax(targets['edges'], axis=-1))
         match_edges_tensor = tf.where(equal_tensor, tf.ones(1, dtype=self.mydtype), tf.zeros(1, dtype=self.mydtype))
         accuracy_edges = tf.reduce_mean(match_edges_tensor)
 
-        abs_dist_tensor = tf.losses.mean_absolute_error(tf.argmax(predictions['e_pred']), tf.argmax(targets['edges']))
+        abs_dist_tensor = tf.losses.mean_absolute_error(tf.cast(tf.argmax(predictions['e_pred'], axis=-1), dtype=self.mydtype), tf.cast(tf.argmax(targets['edges'], axis=-1), dtype=self.mydtype))
 
         self.metrics[self._mode]["accuracy_edges"](accuracy_edges)
         self.metrics[self._mode]["abs_dist_loss"](abs_dist_tensor)
