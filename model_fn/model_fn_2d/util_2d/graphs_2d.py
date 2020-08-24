@@ -124,7 +124,10 @@ class GraphConv1MultiFF(Graph2D):
         self.graph_params["nhidden_dense_final"] = 6
         self.graph_params["edge_classifier"] = False
         self.graph_params["batch_norm"] = False
-        self.graph_params["nhidden_max_edges"] = 6
+        if self._flags.hasKey("max_edges"):
+            self.graph_params["nhidden_max_edges"] = self._flags.max_edges
+        else:
+            self.graph_params["nhidden_max_edges"] = 12
         self.graph_params["ff_activation"] = "leaky_relu"
         self.graph_params["pre_activation"] = None
         self.graph_params["pre_area"] = False
