@@ -25,8 +25,7 @@ PARAMS="
     --model_type ModelPolygonClassifier \
     --input_type InputFnArbitraryPolygon2D \
     --graph GraphConv1MultiFF \
-    --graph_params edge_classifier=True pre_points_out=False \
-    --graph_params pre_radius=False pre_rotation=False pre_translation=False \
+    --graph_params edge_classifier=True pre_points_out=False
     --max_edges 12 \
     --loss_mode softmax_cross_entropy \
     --print_to both \
