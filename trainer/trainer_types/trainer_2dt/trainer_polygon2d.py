@@ -4,12 +4,13 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 import util.flags as flags
 from trainer.trainer_base import TrainerBase
-from input_fn.input_fn_2d.input_fn_generator_ap2d import InputFnPolygon2D
+import input_fn.input_fn_2d.input_fn_generator_2d as input_fns
 import model_fn.model_fn_2d.model_fn_ap2d as models
 
 # Model parameter
 # ===============
 flags.define_string('model_type', 'ModelPolygon', 'Model Type to use choose from: ModelTriangle')
+flags.define_string('input_type', 'ModelPolygon', 'Model Type to use choose from: ModelTriangle')
 flags.define_string('loss_mode', "abs_diff", "'abs_diff', 'softmax_crossentropy")
 flags.define_string('graph', 'GraphConv2MultiFF', 'class name of graph architecture')
 
@@ -27,7 +28,7 @@ flags.define_integer('max_edges', 6, "Max number of edges must be known (depends
 class TrainerPolygon2D(TrainerBase):
     def __init__(self):
         super(TrainerPolygon2D, self).__init__()
-        self._input_fn_generator = InputFnPolygon2D(self._flags)
+        self._input_fn_generator = getattr(input_fns, self._flags.input_type)(self._flags)
         self._graph = getattr(models, self._flags.model_type)(self._params)
         self._graph.info()
 

@@ -23,7 +23,7 @@ PARAMS="
     --epochs ${EPOCH} \
     --delete_event_files False \
     --model_type ModelPolygonClassifier \
-    --input_type InputFnArbirtraryPolygon2D \
+    --input_type InputFnArbitraryPolygon2D \
     --graph GraphConv1MultiFF \
     --graph_params pre_radius=False pre_rotation=False pre_translation=False \
     --max_edges 12 \
@@ -32,7 +32,7 @@ PARAMS="
     --gpu_devices ${GPU}
 "
 
-    CUDA_VISIBLE_DEVICES="" TS_SOCKET=${QUEUE} PYTHONPATH=/home/$USER/devel/projects/projectneiss2d/tf_neiss:$PYTHONPATH tsp  python -u ./tf_neiss/trainer/trainer_types/trainer_2dt/trainer_rp2d.py ${PARAMS} "$@"
+CUDA_VISIBLE_DEVICES="" TS_SOCKET=${QUEUE} PYTHONPATH=/home/$USER/devel/projects/projectneiss2d/tf_neiss:$PYTHONPATH tsp python -u ./tf_neiss/trainer/trainer_types/trainer_2dt/trainer_polygon2d_classifier.py ${PARAMS} "$@"
 
 << ////
 # example call:

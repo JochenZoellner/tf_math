@@ -24,7 +24,6 @@ PARAMS="
     --delete_event_files False \
     --model_type ModelPolygonClassifier \
     --graph GraphConv1MultiFF \
-    --graph_params pre_radius=False pre_rotation=False pre_translation=False \
     --max_edges 12 \
     --loss_mode softmax_crossentropy \
     --print_to both \

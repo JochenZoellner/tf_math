@@ -139,12 +139,12 @@ class GraphConv1MultiFF(Graph2D):
                 self._tracked_layers["batch_norm"].trainable = True
         self._tracked_layers["conv_1"] = tf.keras.layers.Conv1D(filters=4, kernel_size=8,
                                                                 padding="same",
-                                                                strides=2, activation=ff_activation)
+                                                                strides=2, activation=tf.nn.leaky_relu)
         self._tracked_layers["flatten_1"] = tf.keras.layers.Flatten()
         # loop over all number in self.graph_params["dense_layers"]
         for layer_index, n_hidden in enumerate(self.graph_params["dense_layers"]):
             name = "ff_{}".format(layer_index + 1)
-            self._tracked_layers[name] = tf.keras.layers.Dense(n_hidden, activation=tf.nn.leaky_relu, name=name)
+            self._tracked_layers[name] = tf.keras.layers.Dense(n_hidden, activation=ff_activation, name=name)
         # maybe add output layers
         if self.graph_params["pre_points_out"]:
             self._tracked_layers["ff_final"] = tf.keras.layers.Dense(self.graph_params["nhidden_dense_final"],

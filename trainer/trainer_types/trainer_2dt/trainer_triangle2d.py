@@ -4,7 +4,7 @@ from trainer.trainer_base import TrainerBase
 import tensorflow as tf
 import model_fn.model_fn_2d.model_fn_2dtriangle as models
 import util.flags as flags
-from input_fn.input_fn_2d.input_fn_generator_t2d import InputFnTriangle2D
+from input_fn.input_fn_2d.input_fn_generator_2d import InputFnTriangle2D
 from util.misc import get_commit_id, Tee
 # Model parameter
 # ===============
@@ -24,7 +24,7 @@ class Trainer2DTriangle(TrainerBase):
         self._model_fn_class = getattr(models, self._flags.model_type)
         # self._graph.info()
 
-    def plot_architecure(self):
+    def plot_architecture(self):
         from tensorflow.keras.utils import plot_model
         commit_id, repos_path = get_commit_id(os.path.realpath(__file__))
         print("source code path:{}\ncommit-id: {}".format(repos_path, commit_id))
@@ -44,6 +44,6 @@ if __name__ == '__main__':
     # logging.basicConfig(level=logging.INFO)
     trainer = Trainer2DTriangle()
     if flags.FLAGS.mode == "plot":
-        trainer.plot_architecure()
+        trainer.plot_architecture()
     else:
         trainer.train()
