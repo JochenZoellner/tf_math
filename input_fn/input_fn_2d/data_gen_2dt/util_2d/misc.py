@@ -170,7 +170,6 @@ def get_area_of_triangle(points):
     return np.sqrt(under_root) if under_root >= 0.0 else -1.0
 
 
-
 def get_min_aspect_ratio(points):
     assert type(points) == np.ndarray
     assert points.shape == (3, 2)
