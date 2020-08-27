@@ -7,8 +7,8 @@ import pathlib
 from util import flags
 import tensorflow as tf
 import json
-import input_fn.input_fn_2d.input_fn_generator_t2d as InputFn
-import input_fn.input_fn_2d.data_gen_2dt.util_2d.tf_polygon_2d_helper as tf_p2dh
+import input_fn.input_fn_2d.input_fn_generator_2d as input_fns
+from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc
 
 
 logger = logging.getLogger("dataset_stats.py")
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     logger.debug("CWD: {}".format(os.getcwd()))
     assert flags.FLAGS.val_list, "--val_list must be set!"
 
-    input_fn_generator = InputFn.InputFnTriangle2D(flags.FLAGS)
+    input_fn_generator = input_fns.InputFnTriangle2D(flags.FLAGS)
     dataset_val = input_fn_generator.get_input_fn_val()
     test_batch = next(iter(dataset_val))
 
@@ -154,7 +154,7 @@ if __name__ == "__main__":
             # print(sample[1, len_phi_array//2-4:len_phi_array//2+4].numpy())
             # print(-mask_phi[:len_phi_array // 2].max() * 180.0 / np.pi + 90)
             # print(mask_phi[len_phi_array // 2:].min() * 180.0 / np.pi - 90)
-        triangle_area_arr[batch*flags.FLAGS.val_batch_size:(batch+1)*flags.FLAGS.val_batch_size] = tf_p2dh.get_area_of_triangle(targets['points'])
+        triangle_area_arr[batch*flags.FLAGS.val_batch_size:(batch+1)*flags.FLAGS.val_batch_size] = misc.get_area_of_triangle(targets['points'])
 
     result_dir = os.path.join("out", os.path.basename(flags.FLAGS.val_list)[:-4])
     if not os.path.isdir(result_dir):
