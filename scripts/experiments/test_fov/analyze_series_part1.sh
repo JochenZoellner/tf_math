@@ -19,3 +19,6 @@ CUDA_VISIBLE_DEVICES="" PYTHONPATH=/home/$USER/devel/projects/projectneiss2d/tf_
 
 # example call: $> sh ./tf_neiss/scripts/experiments/test_fov/analyze_series_part1.sh min_fov_series
 # example call: $> sh ./tf_neiss/scripts/experiments/test_fov/analyze_series_part1.sh max_fov_series --parameter_name max_fov
+# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/analyze_series_part1.sh max_fov_series --series_dir models/dataset_t2d_fov_exp/min_fov_seriesB_0 models/dataset_t2d_fov_exp/min_fov_seriesB_1
+# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/analyze_series_part1.sh max_fov_series --parameter_name max_fov --series_dir models/dataset_t2d_fov_exp/max_fov_seriesB_0 models/dataset_t2d_fov_exp/max_fov_seriesB_1 models/dataset_t2d_fov_exp/max_fov_seriesB_2 models/dataset_t2d_fov_exp/max_fov_seriesB_3 models/dataset_t2d_fov_exp/max_fov_seriesB_4
+# example call: $> sh ./tf_neiss/scripts/experiments/test_fov/analyze_series_part1.sh min_fov_series --series_dir models/dataset_t2d_fov_exp/min_fov_seriesB_0 models/dataset_t2d_fov_exp/min_fov_seriesB_1 models/dataset_t2d_fov_exp/min_fov_seriesB_2 models/dataset_t2d_fov_exp/min_fov_seriesB_3 models/dataset_t2d_fov_exp/min_fov_seriesB_4

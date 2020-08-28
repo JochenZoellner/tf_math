@@ -38,10 +38,9 @@ def generate_target_triangle(size=50.0, center=False, x_sorted=True, min_area=10
         points = rng.uniform(-size, size, size=(3, 2)).astype(np.float32)
         area = misc.get_area_of_triangle(points)
         if area >= min_area \
-                and misc.has_min_aspect_ratio(points, min_aspect_ratio) \
+                and misc.has_min_angle(points, min_angle) \
                 and misc.has_min_point_distance_batched(points, min_dist) \
-                and misc.has_min_angle(points, min_angle) and \
-                misc.has_min_point_distance_batched(points, min_distance):
+                and misc.has_min_aspect_ratio(points, min_aspect_ratio):
             break
 
     if center:
