@@ -7,7 +7,7 @@ import numpy.ma as npm
 import tensorflow as tf
 from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc_tf, misc
 from input_fn.input_fn_2d.input_fn_2d_util import phi_array_open_symetric_no90
-from input_fn.input_fn_2d.input_fn_generator_t2d import InputFnTriangle2D
+from input_fn.input_fn_2d.input_fn_generator_2d import InputFnTriangle2D
 from matplotlib.backends.backend_pdf import PdfPages
 from shapely import geometry
 
