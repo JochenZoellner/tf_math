@@ -3,7 +3,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 import model_fn.model_fn_2d.model_fn_2dtriangle as model_fn_classes
 import util.flags as flags
-from input_fn.input_fn_2d.input_fn_generator_t2d import InputFnTriangle2D
+from input_fn.input_fn_2d.input_fn_generator_t2d import InputFn2D
 from trainer.lav_base import LavBase
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # set tf log_level to warning(2), default: info(1)
@@ -23,7 +23,7 @@ flags.FLAGS.parse_flags()
 class LavTriangle2D(LavBase):
     def __init__(self):
         super(LavTriangle2D, self).__init__()
-        self._input_fn_generator = InputFnTriangle2D(self._flags)
+        self._input_fn_generator = InputFn2D(self._flags)
         self._model_fn_class = getattr(model_fn_classes, self._flags.model_type)
 
 
