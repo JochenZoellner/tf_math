@@ -140,7 +140,7 @@ class SummaryPlotterTriangle(object):
             if "select" in self._flags.plot_params and self._flags.plot_params["select"] == "1":
                 select = iou_arr[i] < 0.50 and doa_imag_arr_cut[i] < 0.03 and doa_real_arr_cut[i] < 0.03
             elif "select" in self._flags.plot_params and self._flags.plot_params["select"] == "2":
-                select = iou_arr[i] < 0.50 and doa_imag_arr_cut[i] < 0.08 and doa_real_arr_cut[i] < 0.08
+                select = iou_arr[i] < 0.70 and doa_imag_arr_cut[i] < 0.08 and doa_real_arr_cut[i] < 0.08
             elif "select" in self._flags.plot_params and self._flags.plot_params["select"] == "all":
                 select = True
             else:
