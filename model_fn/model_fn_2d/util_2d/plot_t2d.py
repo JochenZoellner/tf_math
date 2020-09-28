@@ -137,9 +137,9 @@ class SummaryPlotterTriangle(object):
             # print("target over prediction")
             # print(fc_arr_tgt_cut[1])
             # print(fc_arr_pre_cut[1])
-            if "select" in self._flags.plot_params and self._flags.plot_params["select"] == "1":
+            if "select" in self._flags.plot_params and self._flags.plot_params["select"] == "one":
                 select = iou_arr[i] < 0.50 and doa_imag_arr_cut[i] < 0.03 and doa_real_arr_cut[i] < 0.03
-            elif "select" in self._flags.plot_params and self._flags.plot_params["select"] == "2":
+            elif "select" in self._flags.plot_params and self._flags.plot_params["select"] == "two":
                 select = iou_arr[i] < 0.70 and doa_imag_arr_cut[i] < 0.08 and doa_real_arr_cut[i] < 0.08
             elif "select" in self._flags.plot_params and self._flags.plot_params["select"] == "all":
                 select = True
