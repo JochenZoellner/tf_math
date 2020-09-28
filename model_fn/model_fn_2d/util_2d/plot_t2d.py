@@ -148,7 +148,7 @@ class SummaryPlotterTriangle(object):
 
             if self._flags.plot and select:
                 if not self._pdf_pages:
-                    self._pdf_pages = PdfPages(os.path.join(self._params['flags'].model_dir, "plot_summary.pdf"))
+                    self._pdf_pages = PdfPages(os.path.join(self._params['flags'].model_dir, self._flags.plot_params["filename"]))
                 select_counter += 1
 
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 14))

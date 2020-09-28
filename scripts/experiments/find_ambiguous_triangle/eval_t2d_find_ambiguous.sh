@@ -18,7 +18,7 @@ mkdir -p models/dataset_${DATASET}
       --model_dir models/dataset_${DATASET}/${ID}
       --input_fn_params min_fov=0.0 max_fov=180.0
       --plot True
-      --plot_params select=all select_counter=200
+      --plot_params select=all select_counter=200 filename=plot_summary.pdf
       --data_len ${DATALEN}
       --batch_limiter -1
       "
@@ -27,4 +27,5 @@ mkdir -p models/dataset_${DATASET}
 << ////
 # example call:
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh find_ambiguous_1 0
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh find_ambiguous_1 0 --plot_params select=1 select_counter=200 filename=select1.pdf
 ////
