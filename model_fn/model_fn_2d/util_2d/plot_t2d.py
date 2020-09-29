@@ -64,8 +64,9 @@ class SummaryPlotterTriangle(object):
         doa_imag_arr_cut = np.zeros(self._summary_lenght)
 
         if not self._pdf_pages:
-            self._pdf_pages = PdfPages(os.path.join(self._flags.model_dir, "plot_summary.pdf"))
+            self._pdf_pages = PdfPages(os.path.join(self._flags.model_dir, self._flags.plot_params["filename"]))
 
+        csv_str_list = []
         select_counter = 0
         for i in range(self._summary_lenght):
             if "select_counter" in self._flags.plot_params and self._flags.plot_params[
@@ -276,12 +277,19 @@ class SummaryPlotterTriangle(object):
                                 doa_real_arr[i], doa_imag_arr[i],
                                 doa_real_arr_cut[i], doa_imag_arr_cut[i]))
                 plt.grid()
-
+                tgt_point_str = f"{tgt_points[0][0]}\t{tgt_points[0][1]}\t{tgt_points[1][0]}\t{tgt_points[1][1]}\t{tgt_points[2][0]}\t{tgt_points[2][1]}"
+                pre_point_str = f"{pre_points[0][0]}\t{pre_points[0][1]}\t{pre_points[1][0]}\t{pre_points[1][1]}\t{pre_points[2][0]}\t{pre_points[2][1]}"
+                calc_str = f"{intersetion_area / union_area}\t{min_aspect_ratio_arr[i]}\t{doa_real_arr[i]}\t{doa_imag_arr[i]}\t{doa_real_arr_cut[i]}\t{doa_imag_arr_cut[i]}"
+                csv_str = tgt_point_str + "\t" + pre_point_str + "\t" + calc_str
+                csv_str_list.append(csv_str)
                 self._pdf_pages.savefig(fig)
                 plt.clf()
                 plt.close()
-
+        header_string = f"x1_t\ty1_t\tx2_t\ty2_t\tx3_t\ty3_t\tx1_p\ty1_p\tx2_p\ty2_p\tx3_p\ty3_p\tiou\tmar\tdoa_r\tdoa_i\tdoac_r\tdoac_i\n"
         self._pdf_pages.close()
+        with open(os.path.join(self._flags.model_dir, self._flags.plot_params["filename"][:-3] + "csv")) as f_obj:
+            f_obj.write(header_string)
+            f_obj.writelines(csv_str_list)
         print("selected: {}".format(select_counter))
         print("mean iou: {}".format(np.mean(iou_arr)))
         print("sum tgt area: {}; sum pre area: {}; p/t-area: {}".format(np.mean(tgt_area_arr), np.mean(pre_area_arr),
