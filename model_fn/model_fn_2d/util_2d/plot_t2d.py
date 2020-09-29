@@ -1,15 +1,16 @@
 import os
 
 import matplotlib.pyplot as plt
-import model_fn.util_model_fn.custom_layers as c_layer
 import numpy as np
 import numpy.ma as npm
 import tensorflow as tf
+from matplotlib.backends.backend_pdf import PdfPages
+from shapely import geometry
+
+import model_fn.util_model_fn.custom_layers as c_layer
 from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc_tf, misc
 from input_fn.input_fn_2d.input_fn_2d_util import phi_array_open_symetric_no90
 from input_fn.input_fn_2d.input_fn_generator_2d import InputFnTriangle2D
-from matplotlib.backends.backend_pdf import PdfPages
-from shapely import geometry
 
 np.set_printoptions(precision=6, suppress=True)
 
@@ -287,7 +288,7 @@ class SummaryPlotterTriangle(object):
                 plt.close()
         header_string = f"x1_t\ty1_t\tx2_t\ty2_t\tx3_t\ty3_t\tx1_p\ty1_p\tx2_p\ty2_p\tx3_p\ty3_p\tiou\tmar\tdoa_r\tdoa_i\tdoac_r\tdoac_i\n"
         self._pdf_pages.close()
-        with open(os.path.join(self._flags.model_dir, self._flags.plot_params["filename"][:-3] + "csv")) as f_obj:
+        with open(os.path.join(self._flags.model_dir, self._flags.plot_params["filename"][:-3] + "csv"), 'w') as f_obj:
             f_obj.write(header_string)
             f_obj.writelines(csv_str_list)
         print("selected: {}".format(select_counter))
