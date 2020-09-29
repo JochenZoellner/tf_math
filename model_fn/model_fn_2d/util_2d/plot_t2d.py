@@ -281,7 +281,7 @@ class SummaryPlotterTriangle(object):
                 tgt_point_str = f"{tgt_points[0][0]}\t{tgt_points[0][1]}\t{tgt_points[1][0]}\t{tgt_points[1][1]}\t{tgt_points[2][0]}\t{tgt_points[2][1]}"
                 pre_point_str = f"{pre_points[0][0]}\t{pre_points[0][1]}\t{pre_points[1][0]}\t{pre_points[1][1]}\t{pre_points[2][0]}\t{pre_points[2][1]}"
                 calc_str = f"{intersetion_area / union_area}\t{min_aspect_ratio_arr[i]}\t{doa_real_arr[i]}\t{doa_imag_arr[i]}\t{doa_real_arr_cut[i]}\t{doa_imag_arr_cut[i]}"
-                csv_str = tgt_point_str + "\t" + pre_point_str + "\t" + calc_str
+                csv_str = tgt_point_str + "\t" + pre_point_str + "\t" + calc_str + "\n"
                 csv_str_list.append(csv_str)
                 self._pdf_pages.savefig(fig)
                 plt.clf()
