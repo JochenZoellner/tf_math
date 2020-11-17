@@ -2,11 +2,13 @@ import logging
 import os
 import shutil
 
+import tensorflow as tf
+
 import model_fn.model_fn_2d.util_2d.graphs_2d as graphs
 import model_fn.util_model_fn.custom_layers as c_layer
 import model_fn.util_model_fn.losses as losses
-import tensorflow as tf
 from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc_tf, misc
+from input_fn.input_fn_2d.input_fn_2d_util import phi2s
 from model_fn.model_fn_base import ModelBase
 
 
@@ -31,6 +33,8 @@ class ModelTriangle(ModelBase):
         self.metrics["eval"]["loss_input_diff_normed"] = tf.keras.metrics.Mean("loss_input_diff_normed", self.mydtype)
         self.metrics["train"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
         self.metrics["eval"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
+        self.metrics["train"]["loss_point_diff_s_norm"] = tf.keras.metrics.Mean("loss_point_diff_s_norm", self.mydtype)
+        self.metrics["eval"]["loss_point_diff_s_norm"] = tf.keras.metrics.Mean("loss_point_diff_s_norm", self.mydtype)
         self.metrics["train"]["loss_best_point_diff"] = tf.keras.metrics.Mean("loss_best_point_diff", self.mydtype)
         self.metrics["eval"]["loss_best_point_diff"] = tf.keras.metrics.Mean("loss_best_point_diff", self.mydtype)
 
@@ -86,7 +90,10 @@ class ModelTriangle(ModelBase):
             pre_points = misc_tf.make_spin_positive(pre_points, dtype=self.mydtype)
             pre_in = tf.cast(self.scatter_polygon_tf(points_tf=pre_points), dtype=self.mydtype)
             tgt_in = fc[:, 1:, :]
+            s_norm = phi2s(fc[:, 1, :])
             loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in, tgt_in))
+            loss_input_diff_s_norm = tf.reduce_mean(
+                tf.keras.losses.mean_absolute_error(s_norm * pre_in, s_norm * tgt_in))
             # tf.print(loss_input_diff)
 
             # input_loss_normed
@@ -114,7 +121,8 @@ class ModelTriangle(ModelBase):
                 self._loss += loss_input_diff
             if "input_diff_normed" in self._flags.loss_mode:
                 self._loss += loss_input_diff_normed
-
+            if "input_diff_s_norm" in self._flags.loss_mode:
+                self._loss += loss_input_diff_s_norm
             if "point_diff" in self._flags.loss_mode:
                 self._loss += loss_point_diff
             # if "best_point_diff" in self._flags.loss_mode:
@@ -123,6 +131,7 @@ class ModelTriangle(ModelBase):
             self.metrics[self._mode]["loss_input_diff"](loss_input_diff)
             self.metrics[self._mode]["loss_input_diff_normed"](loss_input_diff_normed)
             self.metrics[self._mode]["loss_point_diff"](loss_point_diff)
+            self.metrics[self._mode]["loss_point_diff_s_norm"](loss_input_diff_s_norm)
 
         # relative_loss = tf.constant(0, self.mydtype)
         # mse_area = tf.constant(0, self.mydtype)
