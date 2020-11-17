@@ -8,8 +8,8 @@ QUEUE="gpu${GPU}"
 EPOCH=200
 set -e
 
-DATASET="t2d_find_ambiguous"
-DATALEN=312
+DATASET="t2d_find_ambiguous_FC"
+DATALEN=614
 
 mkdir -p models/dataset_${DATASET}
 # ToDo replace val with train
