@@ -25,6 +25,7 @@ flags.define_integer("samples_per_file", 1000, "set number of samples saved in e
 flags.define_integer("jobs", -1, "set number of samples saved in each file")
 flags.define_float("delta_phi", 0.01, "set distance (in degree) between measurement points")
 flags.define_float("epsilon", 0.001, "set epsilon for nummerical critical points")
+flags.define_string("phi_range", "pi", "set range of phi values from 0 to  'pi' or '2pi' (open interval) ")
 flags.define_boolean("debug", False, "start debug plotting after data generation")
 flags.define_dict('target_shape_params', {}, "key=value pairs defining the configuration of the input function."
                   "configure the target shape generation")
@@ -57,7 +58,10 @@ class DataGeneratorBase(object):
 
         self._shape_description = None
         self._shape_description_short = None
-        self._phi_arr = phi_fn.phi_array_open_symetric_no90(self._flags.delta_phi)
+        if flags.FLAGS.phi_range == "pi":
+            self._phi_arr = phi_fn.phi_array_open_symetric_no90(self._flags.delta_phi)
+        elif flags.FLAGS.phi_range == "2pi":
+            self._phi_arr = phi_fn.phi_array_2pi_open_symetric_no90(self._flags.delta_phi)
         self._dtype = D_TYPE
         self.saver_obj = None
         self.parse_fn = None
