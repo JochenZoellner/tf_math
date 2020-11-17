@@ -14,7 +14,7 @@ DATALEN=624
 mkdir -p models/dataset_${DATASET}
 # ToDo replace val with train
 PARAMS="
-  --train_lists lists/${DATASET}_val.lst
+  --train_lists lists/${DATASET}_train.lst
   --val_list lists/${DATASET}_val.lst
   --checkpoint_dir models/dataset_${DATASET}/${ID}
   --epochs $EPOCH

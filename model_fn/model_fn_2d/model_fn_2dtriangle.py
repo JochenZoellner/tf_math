@@ -8,7 +8,7 @@ import model_fn.model_fn_2d.util_2d.graphs_2d as graphs
 import model_fn.util_model_fn.custom_layers as c_layer
 import model_fn.util_model_fn.losses as losses
 from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc_tf, misc
-from input_fn.input_fn_2d.input_fn_2d_util import phi2s
+from input_fn.input_fn_2d.input_fn_2d_util import phi2s_tf
 from model_fn.model_fn_base import ModelBase
 
 
@@ -90,10 +90,11 @@ class ModelTriangle(ModelBase):
             pre_points = misc_tf.make_spin_positive(pre_points, dtype=self.mydtype)
             pre_in = tf.cast(self.scatter_polygon_tf(points_tf=pre_points), dtype=self.mydtype)
             tgt_in = fc[:, 1:, :]
-            s_norm = phi2s(fc[:, 1, :])
+            s_norm = phi2s_tf(fc[:, 1, :])
+            s_norm_stack = tf.stack((s_norm, s_norm), axis=1)
             loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in, tgt_in))
             loss_input_diff_s_norm = tf.reduce_mean(
-                tf.keras.losses.mean_absolute_error(s_norm * pre_in, s_norm * tgt_in))
+                tf.keras.losses.mean_absolute_error(s_norm_stack * pre_in, s_norm_stack * tgt_in))
             # tf.print(loss_input_diff)
 
             # input_loss_normed

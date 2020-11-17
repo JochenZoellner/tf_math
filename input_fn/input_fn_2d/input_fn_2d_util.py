@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 
 def phi_array(delta_phi=0.01, phi_min=0.0, phi_max=np.pi, dtype=None):
@@ -29,6 +30,18 @@ def phi_array_2pi_open_symetric_no90(delta_phi=0.01, phi_min=0.0, phi_max=np.pi,
     """exact delta_phi distance from 0 and 2pi and potentially a bit more to pi/2 and 3pi/2"""
     half_range = phi_array_open_symetric_no90(delta_phi, phi_min, phi_max, dtype)
     return np.concatenate((half_range, half_range + np.pi))
+
+
+def phi2s(phi):
+    s = np.array([np.cos(phi), np.sin(phi) - 1.0])
+    s_norm = np.sqrt(np.sum(s**2))
+    return s_norm
+
+
+def phi2s_tf(phi):
+    s = tf.stack((tf.cos(phi), tf.sin(phi) - 1.0))
+    s_norm = tf.sqrt(tf.reduce_sum(tf.pow(s, 2), axis=0))
+    return s_norm
 
 
 if __name__ == "__main__":
