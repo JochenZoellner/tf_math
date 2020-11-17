@@ -27,7 +27,7 @@ def phi_array_open_no90(delta_phi=0.01, phi_min=0.0, phi_max=np.pi, dtype=None):
 
 def phi_array_2pi_open_symetric_no90(delta_phi=0.01, phi_min=0.0, phi_max=np.pi, dtype=None):
     """exact delta_phi distance from 0 and 2pi and potentially a bit more to pi/2 and 3pi/2"""
-    half_range = phi_array_2pi_open_symetric_no90(delta_phi, phi_min, phi_max, dtype)
+    half_range = phi_array_open_symetric_no90(delta_phi, phi_min, phi_max, dtype)
     return np.concatenate((half_range, half_range + np.pi))
 
 
