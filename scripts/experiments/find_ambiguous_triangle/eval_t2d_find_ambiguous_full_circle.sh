@@ -9,14 +9,14 @@ EPOCH=200
 set -e
 
 DATASET="t2d_find_ambiguous_FC"
-DATALEN=614
+DATALEN=624
 
 mkdir -p models/dataset_${DATASET}
 
     LAV_PARAMS="
       --val_list lists/${DATASET}_val.lst
       --model_dir models/dataset_${DATASET}/${ID}
-      --input_fn_params min_fov=0.0 max_fov=180.0
+      --input_fn_params min_fov=0.0 max_fov=360.0
       --plot True
       --plot_params select=all select_counter=200 filename=plot_summary.pdf
       --data_len ${DATALEN}

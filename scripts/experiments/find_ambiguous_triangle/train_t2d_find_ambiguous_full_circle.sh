@@ -9,12 +9,12 @@ EPOCH=200
 set -e
 
 DATASET="t2d_find_ambiguous_FC"
-DATALEN=614
+DATALEN=624
 
 mkdir -p models/dataset_${DATASET}
 # ToDo replace val with train
 PARAMS="
-  --train_lists lists/${DATASET}_train.lst
+  --train_lists lists/${DATASET}_val.lst
   --val_list lists/${DATASET}_val.lst
   --checkpoint_dir models/dataset_${DATASET}/${ID}
   --epochs $EPOCH
@@ -25,7 +25,7 @@ PARAMS="
   --data_len ${DATALEN}
   --calc_ema True
   --optimizer FinalDecayOptimizer
-  --input_params max_fov=180.0 min_fov=0.0
+  --input_params max_fov=360.0 min_fov=0.0
   --optimizer_params learning_rate=0.001 lr_decay_rate=0.95
   --gpu_devices ${GPU}
 "
