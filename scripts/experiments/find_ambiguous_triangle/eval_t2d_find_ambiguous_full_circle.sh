@@ -27,6 +27,6 @@ mkdir -p models/dataset_${DATASET}
 
 << ////
 # example call:
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh find_ambiguous_FC_1 0
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh find_ambiguous_FC_1 0 --plot_params select=1 select_counter=200 filename=select1.pdf
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh find_ambiguous_FC_1 1
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh find_ambiguous_FC_1 1 --plot_params select=1 select_counter=200 filename=select1.pdf
 ////
