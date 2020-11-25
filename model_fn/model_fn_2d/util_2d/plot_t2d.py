@@ -9,7 +9,7 @@ from shapely import geometry
 
 import model_fn.util_model_fn.custom_layers as c_layer
 from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc_tf, misc
-from input_fn.input_fn_2d.input_fn_2d_util import phi_array_open_symetric_no90
+from input_fn.input_fn_2d.input_fn_2d_util import phi_array_open_symetric_no90, phi2s
 from input_fn.input_fn_2d.input_fn_generator_2d import InputFnTriangle2D
 
 np.set_printoptions(precision=6, suppress=True)
@@ -173,7 +173,15 @@ class SummaryPlotterTriangle(object):
                              label="real_pre_cut", linewidth=2)
                     ax2.plot(fc_arr_pre_cut[0], npm.masked_where(0 == fc_arr_pre_cut[2], fc_arr_pre_cut[2]), "r-",
                              label="imag_pre_cut", linewidth=2)
-                    ax2.legend(loc=4)
+
+                elif "plot_s_norm" in self._flags.plot_params and self._flags.plot_params["plot_s_norm"]:
+                    ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1] * phi2s(fc_arr_tgt[0]), label="real_tgt")
+                    ax2.plot(fc_arr_tgt[0], fc_arr_tgt[2] * phi2s(fc_arr_tgt[0]), label="imag_tgt")
+                    #  prediction
+                    ax2.plot(fc_arr_pre[0], fc_arr_pre[1] * phi2s(fc_arr_pre[0]), label="real_pre")
+                    ax2.plot(fc_arr_pre[0], fc_arr_pre[2] * phi2s(fc_arr_pre[0]), label="imag_pre")
+
+                    ax2.set_xlim(0, np.pi)
                 else:
                     ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
                     ax2.plot(fc_arr_tgt[0], fc_arr_tgt[2], label="imag_tgt")
@@ -197,6 +205,7 @@ class SummaryPlotterTriangle(object):
                     #     ax2.set_ylabel("imag")
                     # #     # ax2.set_zlabel("|phi-pi/2|")
 
+                ax2.legend(loc=4)
                 # # complexphi
                 # target
                 # if PLOT == "stripes":
