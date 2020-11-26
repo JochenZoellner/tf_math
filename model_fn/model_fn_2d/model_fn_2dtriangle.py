@@ -89,9 +89,16 @@ class ModelTriangle(ModelBase):
             pre_points = tf.cast(tf.reshape(predictions['pre_points'], [-1, 3, 2]), dtype=self.mydtype)
             pre_points = misc_tf.make_spin_positive(pre_points, dtype=self.mydtype)
             pre_in = tf.cast(self.scatter_polygon_tf(points_tf=pre_points), dtype=self.mydtype)
-            tgt_in = fc[:, 1:, :]
             s_norm = phi2s_tf(fc[:, 1, :])
-            s_norm_stack = tf.stack((s_norm, s_norm), axis=1)
+            if self._graph.graph_params["abs_only"]:
+                print("Absolute only in loss")
+                tgt_in = tf.expand_dims(tf.math.sqrt(tf.maximum(tf.reduce_sum(tf.math.square(fc[:, 1:, :]), axis=-2), 1e-12)), axis=-2)
+                pre_in = tf.expand_dims(tf.math.sqrt(tf.maximum(tf.reduce_sum(tf.math.square(pre_in), axis=-2), 1e-12)), axis=-2)
+
+                s_norm_stack = tf.expand_dims(s_norm, axis=1)
+            else:
+                tgt_in = fc[:, 1:, :]
+                s_norm_stack = tf.stack((s_norm, s_norm), axis=1)
             loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in, tgt_in))
             loss_input_diff_s_norm = tf.reduce_mean(
                 tf.keras.losses.mean_absolute_error(s_norm_stack * pre_in, s_norm_stack * tgt_in))

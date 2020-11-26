@@ -39,6 +39,6 @@ sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguo
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_s_norm.sh find_ambiguous_s_norm_reference_lr0.0002_lrd0.98 1 --optimizer_params learning_rate=0.0002 lr_decay_rate=0.98
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_s_norm.sh find_ambiguous_s_norm_reference_swish 1  --graph_prams ff_activation=swish
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_s_norm.sh find_ambiguous_s_norm_reference_lr0.0002_lrd0.98_swish 1 --optimizer_params learning_rate=0.0002 lr_decay_rate=0.98 --graph_prams ff_activation=swish
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_s_norm.sh find_ambiguous_s_norm_reference_lr0.0002_lrd0.98_xlayer256 1 --optimizer_params learning_rate=0.0005 lr_decay_rate=0.98 --graph_prams=[512,1024,1024,512,256,256,256]
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_s_norm.sh find_ambiguous_s_norm_reference_lr0.0002_lrd0.98_xlayer2048_swish 1 --optimizer_params learning_rate=0.0005 lr_decay_rate=0.98 --graph_prams=[512,1024,2048,1024,256,128,64,32] ff_activation=swish
 
 ////

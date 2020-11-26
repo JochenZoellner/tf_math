@@ -124,6 +124,8 @@ class GraphConv1MultiFF(Graph2D):
         self.graph_params["nhidden_dense_final"] = 6
         self.graph_params["edge_classifier"] = False
         self.graph_params["batch_norm"] = False
+        self.graph_params["abs_only"] = False
+
         if self._flags.hasKey("max_edges"):
             self.graph_params["nhidden_max_edges"] = self._flags.max_edges
         else:
@@ -140,9 +142,15 @@ class GraphConv1MultiFF(Graph2D):
             self._tracked_layers["batch_norm"] = tf.keras.layers.BatchNormalization(axis=2)
             if self.global_epoch >= 2:
                 self._tracked_layers["batch_norm"].trainable = True
+
+        if self.graph_params["abs_only"]:
+            print("Absolute only in init")
+            stride = 1
+        else:
+            stride = 2
         self._tracked_layers["conv_1"] = tf.keras.layers.Conv1D(filters=4, kernel_size=8,
                                                                 padding="same",
-                                                                strides=2, activation=tf.nn.leaky_relu)
+                                                                strides=stride, activation=tf.nn.leaky_relu)
         self._tracked_layers["flatten_1"] = tf.keras.layers.Flatten()
         # loop over all number in self.graph_params["dense_layers"]
         for layer_index, n_hidden in enumerate(self.graph_params["dense_layers"]):
@@ -166,11 +174,22 @@ class GraphConv1MultiFF(Graph2D):
     def call(self, inputs, training=False, build=None):
 
         ff_in = inputs["fc"][:, 1:]
+        if self.graph_params["abs_only"]:
+            print("Absolute only in call")
+            ff_in = tf.expand_dims(tf.math.sqrt(tf.maximum(tf.reduce_sum(tf.math.square(ff_in), axis=-2), 1e-12)), axis=-2)
+        else:
+            pass
+
         if self.graph_params["pre_activation"]:
             ff_in = getattr(layers, self.graph_params["pre_activation"])(ff_in)
         if self.graph_params["batch_norm"]:
             ff_in = self._tracked_layers["batch_norm"](ff_in, training)
+
+        # if self.graph_params["abs_only"]:
+        #     prepare_conv = ff_in
+        # else:
         prepare_conv = tf.transpose(ff_in, [0, 2, 1])
+
         prepare_conv = tf.expand_dims(self._tracked_layers["flatten_1"](prepare_conv), axis=-1)
         conv_1_res = self._tracked_layers["conv_1"](prepare_conv)
         conv_1_reshaped = tf.transpose(conv_1_res, [0, 2, 1])
