@@ -5,6 +5,21 @@ import tensorflow as tf
 
 logger = logging.getLogger("util_2d/misc_tf.py")
 
+def center_triangle(points):
+    d_xy = tf.reduce_sum(points, axis=-2) / 3.0
+    return points - tf.expand_dims(d_xy, axis=-2)
+
+def flip_along_axis(points, axis="x"):
+    """flip along x axis, [(batch), points, xy] - [None, None, 2]"""
+    if axis == "x":
+        mask = tf.constant([-1.0, 1.0])
+    elif axis == "y":
+        mask = tf.constant([1.0, -1.0])
+    else:
+        raise AttributeError("only axis='x' or axis='y' is possible as flip axis")
+    res = tf.math.multiply(points, mask)
+    return res
+
 
 def get_spin_batched(batched_point_squence, dtype=tf.float32):
     """[batch, point, coordinate]

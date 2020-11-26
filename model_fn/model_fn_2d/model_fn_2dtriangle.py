@@ -37,6 +37,8 @@ class ModelTriangle(ModelBase):
         self.metrics["eval"]["loss_point_diff_s_norm"] = tf.keras.metrics.Mean("loss_point_diff_s_norm", self.mydtype)
         self.metrics["train"]["loss_best_point_diff"] = tf.keras.metrics.Mean("loss_best_point_diff", self.mydtype)
         self.metrics["eval"]["loss_best_point_diff"] = tf.keras.metrics.Mean("loss_best_point_diff", self.mydtype)
+        self.metrics["train"]["loss_best_point_diff_invariant"] = tf.keras.metrics.Mean("loss_best_point_diff_invariant", self.mydtype)
+        self.metrics["eval"]["loss_best_point_diff_invariant"] = tf.keras.metrics.Mean("loss_best_point_diff_invariant", self.mydtype)
 
         self.metrics["train"]["loss_rmse_area"] = tf.keras.metrics.Mean("loss_rmse_area", self.mydtype)
         self.metrics["eval"]["loss_rmse_area"] = tf.keras.metrics.Mean("loss_rmse_area", self.mydtype)
@@ -92,8 +94,10 @@ class ModelTriangle(ModelBase):
             s_norm = phi2s_tf(fc[:, 1, :])
             if self._graph.graph_params["abs_only"]:
                 print("Absolute only in loss")
-                tgt_in = tf.expand_dims(tf.math.sqrt(tf.maximum(tf.reduce_sum(tf.math.square(fc[:, 1:, :]), axis=-2), 1e-12)), axis=-2)
-                pre_in = tf.expand_dims(tf.math.sqrt(tf.maximum(tf.reduce_sum(tf.math.square(pre_in), axis=-2), 1e-12)), axis=-2)
+                tgt_in = tf.expand_dims(
+                    tf.math.sqrt(tf.maximum(tf.reduce_sum(tf.math.square(fc[:, 1:, :]), axis=-2), 1e-12)), axis=-2)
+                pre_in = tf.expand_dims(tf.math.sqrt(tf.maximum(tf.reduce_sum(tf.math.square(pre_in), axis=-2), 1e-12)),
+                                        axis=-2)
 
                 s_norm_stack = tf.expand_dims(s_norm, axis=1)
             else:
@@ -123,7 +127,16 @@ class ModelTriangle(ModelBase):
                                                    self.mydtype)
                 else:
                     loss_best_point_diff = tf.constant(0.0, self.mydtype)
+                if "best_point_diff_invariant" in self._flags.loss_mode or "show_best_point_diff_invariant" in self._flags.loss_mode:
+                    loss_best_point_diff_invariant = tf.cast(losses.batch_point3_loss_absolute_invariant(targets["points"],
+                                                                                               predictions[
+                                                                                                   "pre_points"],
+                                                                                               batch_size=self._current_batch_size),
+                                                   self.mydtype)
+                else:
+                    loss_best_point_diff_invariant = tf.constant(0.0, self.mydtype)
                 self.metrics[self._mode]["loss_best_point_diff"](loss_best_point_diff)
+                self.metrics[self._mode]["loss_best_point_diff_invariant"](loss_best_point_diff_invariant)
             # tf.print("input_diff-loss", loss_input_diff)
             if "input_diff" in self._flags.loss_mode:
                 self._loss += loss_input_diff

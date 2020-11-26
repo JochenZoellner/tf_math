@@ -34,10 +34,10 @@ CUDA_VISIBLE_DEVICES="" TS_SOCKET=${QUEUE} PYTHONPATH=$(pwd)/tf_neiss:$PYTHONPAT
 <<////
 # example call:
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_FC_reference_lr0.0002_lrd0.98_swish 1 --optimizer_params learning_rate=0.0002 lr_decay_rate=0.98 --graph_params ff_activation=swish
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_FC_reference_lr0.0002_lrd0.98 1 --optimizer_params learning_rate=0.0002 lr_decay_rate=0.98
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_FC_reference 1
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_FC_reference_lr0.0001 1 --optimizer_params learning_rate=0.0001
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_FC_reference_lrd0.98 1 --optimizer_params lr_decay_rate=0.98
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_FC_reference_lr0.0002_lrd0.98 1 --optimizer_params learning_rate=0.0002 lr_decay_rate=0.98
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_FC_reference_swish 1  --graph_params ff_activation=swish
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_FC_reference_lr0.0002_lrd0.98_xlayer2048_swish 1 --optimizer_params learning_rate=0.0002 lr_decay_rate=0.98 --graph_params=[512,1024,2048,1024,256,128,64,32] ff_activation=swish
 
@@ -46,10 +46,10 @@ sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguo
 <<////
 # example call:
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_absolute_FC_reference_lr0.0002_lrd0.98_swish 1 --optimizer_params learning_rate=0.0002 lr_decay_rate=0.98 --graph_params ff_activation=swish abs_only=True
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_absolute_FC_reference_lr0.0002_lrd0.98 1 --optimizer_params learning_rate=0.0002 lr_decay_rate=0.98 --graph_params abs_only=True
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_absolute_FC_reference 1 --graph_params abs_only=True
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_absolute_FC_reference_lr0.0001 1 --optimizer_params learning_rate=0.0001--graph_params abs_only=True
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_absolute_FC_reference_lrd0.98 1 --optimizer_params lr_decay_rate=0.98 --graph_params abs_only=True
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_absolute_FC_reference_lr0.0002_lrd0.98 1 --optimizer_params learning_rate=0.0002 lr_decay_rate=0.98 --graph_params abs_only=True
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_absolute_FC_reference_swish 1  --graph_params ff_activation=swish abs_only=True
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/train_t2d_find_ambiguous_full_circle.sh FA_absolute_FC_reference_lr0.0002_lrd0.98_xlayer2048_swish 1 --optimizer_params learning_rate=0.0002 lr_decay_rate=0.98 --graph_params=[512,1024,2048,1024,256,128,64,32] ff_activation=swish abs_only=True
 
