@@ -46,7 +46,7 @@ def map_point3_loss_absolute_invariant(in_tuple):
     tgt_points = center_triangle(tgt_points)
     pred_points = center_triangle(pred_points)
 
-    pred_points_x_flip = flip_along_axis(pred_points, axis="x")
+    pred_points_x_flip = flip_along_axis(pred_points, axis="xy")
     no_flip_res = map_point3_loss((tf.keras.backend.flatten(pred_points), tf.keras.backend.flatten(tgt_points)))
     flip_res = map_point3_loss((tf.keras.backend.flatten(pred_points_x_flip), tf.keras.backend.flatten(tgt_points)))
     return tf.minimum(no_flip_res, flip_res)

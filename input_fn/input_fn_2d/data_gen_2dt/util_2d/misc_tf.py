@@ -15,8 +15,10 @@ def flip_along_axis(points, axis="x"):
         mask = tf.constant([-1.0, 1.0])
     elif axis == "y":
         mask = tf.constant([1.0, -1.0])
+    elif axis == "xy":
+        mask = tf.constant([-1.0, -1.0])
     else:
-        raise AttributeError("only axis='x' or axis='y' is possible as flip axis")
+        raise AttributeError("only 'x', 'y' or 'xy' is possible for parameter axis")
     res = tf.math.multiply(points, mask)
     return res
 

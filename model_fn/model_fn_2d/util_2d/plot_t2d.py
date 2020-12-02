@@ -9,6 +9,7 @@ from shapely import geometry
 
 import model_fn.util_model_fn.custom_layers as c_layer
 from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc_tf, misc
+from input_fn.input_fn_2d.data_gen_2dt.util_2d.misc_tf import center_triangle, flip_along_axis
 from input_fn.input_fn_2d.input_fn_2d_util import phi_array_open_symetric_no90, phi2s
 from input_fn.input_fn_2d.input_fn_generator_2d import InputFnTriangle2D
 from util.flags import update_params
@@ -63,6 +64,7 @@ class SummaryPlotterTriangle(object):
         pre_area_arr = np.zeros(self._summary_lenght)
         min_aspect_ratio_arr = np.zeros(self._summary_lenght)
         iou_arr = np.zeros(self._summary_lenght)
+        iou_arr_cr = np.zeros(self._summary_lenght)
         co_loss_arr = np.ones(self._summary_lenght) * np.nan
         wo_loss_arr = np.ones(self._summary_lenght) * np.nan
         doa_real_arr = np.zeros(self._summary_lenght)
@@ -91,9 +93,29 @@ class SummaryPlotterTriangle(object):
             intersetion_area = pre_polygon.intersection(tgt_polygon).area
             union_area = pre_polygon.union(tgt_polygon).area
             iou_arr[i] = intersetion_area / union_area
+
+            # best Intersection if centered and may rotated
+            pre_points_c = center_triangle(pre_points)
+            pre_points_cr = flip_along_axis(pre_points_c, axis="xy")
+            tgt_points_cr = center_triangle(tgt_points)
+
+            pre_polygon_c = geometry.Polygon([pre_points_c[0], pre_points_c[1], pre_points_c[2]])
+            pre_polygon_cr = geometry.Polygon([pre_points_cr[0], pre_points_cr[1], pre_points_cr[2]])
+            tgt_polygon_c = geometry.Polygon([tgt_points_cr[0], tgt_points_cr[1], tgt_points_cr[2]])
+            intersetion_area_c = pre_polygon_c.intersection(tgt_polygon_c).area
+            union_area_c = pre_polygon_c.union(tgt_polygon_c).area
+            intersetion_area_cr = pre_polygon_cr.intersection(tgt_polygon_c).area
+            union_area_cr = pre_polygon_cr.union(tgt_polygon_c).area
+            iou_arr_cr[i] = max(intersetion_area_c / union_area_c, intersetion_area_cr / union_area_cr)
+
+
+
             tgt_area_arr[i] = tgt_polygon.area
             pre_area_arr[i] = pre_polygon.area
+
+
             min_aspect_ratio_arr[i] = misc.get_min_aspect_ratio(tgt_points)
+
 
             # co_loss_arr[i] = self._summary_object["ordered_best"][i]
             # wo_loss_arr[i] = self._summary_object["unordered_best"][i]
@@ -282,14 +304,16 @@ class SummaryPlotterTriangle(object):
 
                 ax1.set_title("(red) pre: P1={:3.2f},{:3.2f}|P2={:3.2f},{:3.2f}|P3={:3.2f},{:3.2f}\n"
                               "(blue)tgt: P1={:3.2f},{:3.2f}|P2={:3.2f},{:3.2f}|P3={:3.2f},{:3.2f}\n"
-                              "IoU: {:1.2f}; MAR {:0.2f}\n"
+                              "IoU:    {:1.2f}; MAR {:0.2f}\n"
+                              "IoU_cr: {:1.2f};\n"
                               "DoA (real)    {:1.2f}; DoA (imag)    {:1.2f}\n"
                               "DoA_cut(real) {:1.2f}; DoA_cut(imag) {:1.2f}".format(
                                 pre_points[0][0], pre_points[0][1], pre_points[1][0],
                                 pre_points[1][1], pre_points[2][0], pre_points[2][1],
                                 tgt_points[0][0], tgt_points[0][1], tgt_points[1][0],
                                 tgt_points[1][1], tgt_points[2][0], tgt_points[2][1],
-                                intersetion_area / union_area, min_aspect_ratio_arr[i],
+                                iou_arr[i], min_aspect_ratio_arr[i],
+                                iou_arr_cr[i],
                                 doa_real_arr[i], doa_imag_arr[i],
                                 doa_real_arr_cut[i], doa_imag_arr_cut[i]))
                 plt.grid()
@@ -308,6 +332,7 @@ class SummaryPlotterTriangle(object):
             f_obj.writelines(csv_str_list)
         print("selected: {}".format(select_counter))
         print("mean iou: {}".format(np.mean(iou_arr)))
+        print("mean_mr iou: {}".format(np.mean(iou_arr_cr)))
         print("sum tgt area: {}; sum pre area: {}; p/t-area: {}".format(np.mean(tgt_area_arr), np.mean(pre_area_arr),
                                                                         np.sum(pre_area_arr) / np.sum(tgt_area_arr)))
 
