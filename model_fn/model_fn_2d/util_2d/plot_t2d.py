@@ -78,9 +78,7 @@ class SummaryPlotterTriangle(object):
         csv_str_list = []
         select_counter = 0
         for i in range(self._summary_lenght):
-            if "select_counter" in self.plot_params and self.plot_params[
-                "select_counter"] <= select_counter:
-                break
+
             pre_points = np.reshape(self._summary_object["pre_points"][i], (3, 2))
             tgt_points = np.reshape(self._summary_object["tgt_points"][i], (3, 2))
 
@@ -167,6 +165,9 @@ class SummaryPlotterTriangle(object):
             # print("target over prediction")
             # print(fc_arr_tgt_cut[1])
             # print(fc_arr_pre_cut[1])
+            if "select_counter" in self.plot_params and self.plot_params[
+                "select_counter"] <= select_counter:
+                continue
             if "select" in self.plot_params and self.plot_params["select"] == "one":
                 select = iou_arr[i] < 0.50 and doa_imag_arr_cut[i] < 0.03 and doa_real_arr_cut[i] < 0.03
             elif "select" in self.plot_params and self.plot_params["select"] == "two":
