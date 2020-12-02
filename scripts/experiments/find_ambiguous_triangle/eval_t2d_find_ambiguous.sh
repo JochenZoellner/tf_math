@@ -21,6 +21,8 @@ mkdir -p models/dataset_${DATASET}
       --plot_params select=all select_counter=200 filename=plot_summary.pdf
       --data_len ${DATALEN}
       --batch_limiter -1
+      --graph GraphConv1MultiFF
+      --loss_mode best_point_diff,best_point_diff_invariant
       "
     # shellcheck disable=SC2068
     CUDA_VISIBLE_DEVICES="" PYTHONPATH=/home/$USER/devel/projects/projectneiss2d/tf_neiss:$PYTHONPATH python -u ./tf_neiss/trainer/lav_types/lav_triangle2d.py ${LAV_PARAMS} ${@} >> "models/dataset_${DATASET}/${ID}/lav-${ID}.log" 2>&1
