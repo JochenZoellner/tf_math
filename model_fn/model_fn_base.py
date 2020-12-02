@@ -208,6 +208,12 @@ class ModelBase(object):
         """is called at end of lav(load_and_validate), can use graph variables or plot something"""
         pass
 
+    def print_all_metrics(self, mode="eval"):
+        """is called at end of lav(load_and_validate), can use graph variables or plot something"""
+
+        for metric in self.metrics[mode]:
+            print(f'{metric}:\t{self.metrics[mode][metric].result()}')
+
     @property
     def graph_signature(self):
         return None

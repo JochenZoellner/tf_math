@@ -12,6 +12,11 @@ flags.define_string('val_list', 'lists/dummy_val.lst', '.lst-file specifying the
 flags.define_integer('val_batch_size', 100, 'number of elements in a val_batch')
 flags.define_list('gpu_devices', int, 'space seperated list of GPU indices to use. ', " ", [])
 flags.define_dict('input_params', {}, "key=value pairs defining the configuration of the optimizer.")
+flags.define_dict('model_params', {}, "key=value pairs defining the configuration of the model function."
+                  "model specific parametrization, see model_fn.model_fn_<your-project> for usage.")
+flags.define_dict('graph_params', {}, "key=value pairs defining the configuration of the input function."
+                  "graph specific parametrization, see model_fn.model_fn_<your-project>. ... graphs for usage.")
+
 flags.FLAGS.parse_flags()
 flags.define_float('gpu_memory', 0.0, 'amount of gpu memory in MB if set above 0')
 flags.define_string("debug_dir", "", "specify dir to save debug outputs, saves are model specific ")
@@ -59,6 +64,7 @@ class LavBase(object):
                     time.time() - t1_val)))
         print("Time: {:8.2f}".format(time.time() - t1_val))
         self._model.print_evaluate_summary()
+        self._model.print_all_metrics()
 
         print("finished")
 

@@ -11,6 +11,7 @@ import model_fn.util_model_fn.custom_layers as c_layer
 from input_fn.input_fn_2d.data_gen_2dt.util_2d import misc_tf, misc
 from input_fn.input_fn_2d.input_fn_2d_util import phi_array_open_symetric_no90, phi2s
 from input_fn.input_fn_2d.input_fn_generator_2d import InputFnTriangle2D
+from util.flags import update_params
 
 np.set_printoptions(precision=6, suppress=True)
 
@@ -22,6 +23,11 @@ class SummaryPlotterTriangle(object):
         self._summary_object = summary_object
         self._summary_lenght = len(self._summary_object["tgt_points"])
         self._flags = flags
+        self.plot_params = {}
+        self.plot_params["select"] = "all"
+        self.plot_params["select_counter"] = 200
+        self.plot_params["filename"] = "plot_summary.pdf"
+        self.plot_params = update_params(self.plot_params, self._flags.plot_params, "plot")
         self.fig_list = []
         self._pdf_pages = None
 
@@ -65,12 +71,12 @@ class SummaryPlotterTriangle(object):
         doa_imag_arr_cut = np.zeros(self._summary_lenght)
 
         if not self._pdf_pages:
-            self._pdf_pages = PdfPages(os.path.join(self._flags.model_dir, self._flags.plot_params["filename"]))
+            self._pdf_pages = PdfPages(os.path.join(self._flags.model_dir, self.plot_params["filename"]))
 
         csv_str_list = []
         select_counter = 0
         for i in range(self._summary_lenght):
-            if "select_counter" in self._flags.plot_params and self._flags.plot_params[
+            if "select_counter" in self.plot_params and self.plot_params[
                 "select_counter"] <= select_counter:
                 break
             pre_points = np.reshape(self._summary_object["pre_points"][i], (3, 2))
@@ -139,18 +145,18 @@ class SummaryPlotterTriangle(object):
             # print("target over prediction")
             # print(fc_arr_tgt_cut[1])
             # print(fc_arr_pre_cut[1])
-            if "select" in self._flags.plot_params and self._flags.plot_params["select"] == "one":
+            if "select" in self.plot_params and self.plot_params["select"] == "one":
                 select = iou_arr[i] < 0.50 and doa_imag_arr_cut[i] < 0.03 and doa_real_arr_cut[i] < 0.03
-            elif "select" in self._flags.plot_params and self._flags.plot_params["select"] == "two":
+            elif "select" in self.plot_params and self.plot_params["select"] == "two":
                 select = iou_arr[i] < 0.70 and doa_imag_arr_cut[i] < 0.08 and doa_real_arr_cut[i] < 0.08
-            elif "select" in self._flags.plot_params and self._flags.plot_params["select"] == "all":
+            elif "select" in self.plot_params and self.plot_params["select"] == "all":
                 select = True
             else:
                 select = False
 
             if self._flags.plot and select:
                 if not self._pdf_pages:
-                    self._pdf_pages = PdfPages(os.path.join(self._params['flags'].model_dir, self._flags.plot_params["filename"]))
+                    self._pdf_pages = PdfPages(os.path.join(self._flags.model_dir, self.plot_params["filename"]))
                 select_counter += 1
 
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 14))
@@ -163,7 +169,7 @@ class SummaryPlotterTriangle(object):
 
                 ax2.set_title("F(phi)")
 
-                if "plot_cut" in self._flags.plot_params and self._flags.plot_params["plot_cut"]:
+                if "plot_cut" in self.plot_params and self.plot_params["plot_cut"]:
                     ax2.plot(fc_arr_tgt_cut[0], npm.masked_where(0 == fc_arr_tgt_cut[1], fc_arr_tgt_cut[1]), 'b-',
                              label="real_tgt", linewidth=2)
                     ax2.plot(fc_arr_tgt_cut[0], npm.masked_where(0 == fc_arr_tgt_cut[2], fc_arr_tgt_cut[2]), 'y-',
@@ -174,7 +180,7 @@ class SummaryPlotterTriangle(object):
                     ax2.plot(fc_arr_pre_cut[0], npm.masked_where(0 == fc_arr_pre_cut[2], fc_arr_pre_cut[2]), "r-",
                              label="imag_pre_cut", linewidth=2)
 
-                elif "plot_s_norm" in self._flags.plot_params and self._flags.plot_params["plot_s_norm"]:
+                elif "plot_s_norm" in self.plot_params and self.plot_params["plot_s_norm"]:
                     ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1] * phi2s(fc_arr_tgt[0]), label="real_tgt")
                     ax2.plot(fc_arr_tgt[0], fc_arr_tgt[2] * phi2s(fc_arr_tgt[0]), label="imag_tgt")
                     #  prediction
@@ -297,7 +303,7 @@ class SummaryPlotterTriangle(object):
                 plt.close()
         header_string = f"x1_t\ty1_t\tx2_t\ty2_t\tx3_t\ty3_t\tx1_p\ty1_p\tx2_p\ty2_p\tx3_p\ty3_p\tiou\tmar\tdoa_r\tdoa_i\tdoac_r\tdoac_i\n"
         self._pdf_pages.close()
-        with open(os.path.join(self._flags.model_dir, self._flags.plot_params["filename"][:-3] + "csv"), 'w') as f_obj:
+        with open(os.path.join(self._flags.model_dir, self.plot_params["filename"][:-3] + "csv"), 'w') as f_obj:
             f_obj.write(header_string)
             f_obj.writelines(csv_str_list)
         print("selected: {}".format(select_counter))
