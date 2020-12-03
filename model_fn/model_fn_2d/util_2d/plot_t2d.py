@@ -336,4 +336,7 @@ class SummaryPlotterTriangle(object):
         print("mean_mr iou: {}".format(np.mean(iou_arr_cr)))
         print("sum tgt area: {}; sum pre area: {}; p/t-area: {}".format(np.mean(tgt_area_arr), np.mean(pre_area_arr),
                                                                         np.sum(pre_area_arr) / np.sum(tgt_area_arr)))
+        return {"iou": np.mean(iou_arr),
+                "iou_cr": np.mean(iou_arr_cr),
+                "pot-area": np.sum(pre_area_arr) / np.sum(tgt_area_arr)}
 

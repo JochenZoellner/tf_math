@@ -209,10 +209,14 @@ class ModelBase(object):
         pass
 
     def print_all_metrics(self, mode="eval"):
-        """is called at end of lav(load_and_validate), can use graph variables or plot something"""
-
+        """is called at end of lav(load_and_validate), can use graph variables or plot something
+        -print results of all metrics and return results as dict"""
+        res_dict = {}
         for metric in self.metrics[mode]:
             print(f'{metric}:\t{self.metrics[mode][metric].result()}')
+            res_dict[metric] = float(self.metrics[mode][metric].result().numpy())
+
+        return res_dict
 
     @property
     def graph_signature(self):

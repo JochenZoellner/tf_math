@@ -301,7 +301,10 @@ class ModelTriangle(ModelBase):
     def print_evaluate_summary(self):
         import model_fn.model_fn_2d.util_2d.plot_t2d as plt_fn
         spt_obj = plt_fn.SummaryPlotterTriangle(summary_object=self._summary_object, flags=self._flags)
-        spt_obj.process()
+        res_dict = spt_obj.process()
+
+        return res_dict
+
 
 
     @property

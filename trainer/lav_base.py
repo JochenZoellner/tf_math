@@ -1,3 +1,4 @@
+import json
 import os
 import time
 
@@ -63,8 +64,14 @@ class LavBase(object):
             "val-loss:{:10.3f}, samples/seconde: {:1.1f}".format(val_loss, (batch + 1) * flags.FLAGS.val_batch_size / (
                     time.time() - t1_val)))
         print("Time: {:8.2f}".format(time.time() - t1_val))
-        self._model.print_evaluate_summary()
-        self._model.print_all_metrics()
+        metrics_res = self._model.print_all_metrics()
+        print_evaluate_res = self._model.print_evaluate_summary()
+        dict_out = {**metrics_res, **print_evaluate_res}
+        json_str = json.dumps(dict_out, indent=2)
+
+
+        with open(os.path.join(self._flags.model_dir, f'lav-{os.path.basename(self._flags.model_dir)}.json'), "w") as fp_json:
+            fp_json.write(json_str)
 
         print("finished")
 
