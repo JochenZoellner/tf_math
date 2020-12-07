@@ -22,7 +22,7 @@ mkdir -p models/dataset_${DATASET}
       --data_len ${DATALEN}
       --batch_limiter -1
       --graph GraphConv1MultiFF
-      --loss_mode best_point_diff,best_point_diff_invariant
+      --loss_mode best_point_diff best_point_diff_invariant
       "
     # shellcheck disable=SC2068
     CUDA_VISIBLE_DEVICES="" PYTHONPATH=/home/$USER/devel/projects/projectneiss2d/tf_neiss:$PYTHONPATH python -u ./tf_neiss/trainer/lav_types/lav_triangle2d.py ${LAV_PARAMS} ${@} >> "models/dataset_${DATASET}/${ID}/lav-${ID}.log" 2>&1
@@ -33,8 +33,8 @@ sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguou
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh find_ambiguous_FC_1 1 --plot_params select=1 select_counter=200 filename=select1.pdf
 
 
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_FC_reference_lr0.0002_lrd0.98_swish 1 --plot_params select=1 select_counter=200 filename=select1.pdf &
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_FC_reference_lr0.0002_lrd0.98 1 --plot_params select=1 select_counter=200 filename=select1.pdf &
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_absolute_FC_reference_lr0.0002_lrd0.98_swish 1 --plot_params select=1 select_counter=200 filename=select1.pdf &
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_absolute_FC_reference_lr0.0002_lrd0.98 1 --plot_params select=1 select_counter=200 filename=select1.pdf &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_FC_reference_lr0.0002_lrd0.98_swish 0 --plot_params select=1 select_counter=200 filename=select1.pdf &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_FC_reference_lr0.0002_lrd0.98 0 --plot_params select=1 select_counter=200 filename=select1.pdf &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_absolute_FC_reference_lr0.0002_lrd0.98_swish 0 --plot_params select=1 select_counter=200 filename=select1.pdf &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_absolute_FC_reference_lr0.0002_lrd0.98 0 --plot_params select=1 select_counter=200 filename=select1.pdf &
 ////

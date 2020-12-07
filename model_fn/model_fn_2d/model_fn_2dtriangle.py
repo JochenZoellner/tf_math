@@ -146,6 +146,8 @@ class ModelTriangle(ModelBase):
                 self._loss += loss_input_diff_s_norm
             if "input_diff_abs" in self._flags.loss_mode:
                 self._loss += loss_input_diff_abs
+            if "input_diff_s_norm_abs" in self._flags.loss_mode:
+                self._loss += loss_input_diff_s_norm_abs
             if "point_diff" in self._flags.loss_mode:
                 self._loss += loss_point_diff
             if "best_point_diff" in self._flags.loss_mode:
