@@ -24,7 +24,6 @@ class ModelTriangle(ModelBase):
         self._scatter_calculator = None
         self.scatter_polygon_tf = None
         self._loss = tf.Variable(0.0, dtype=self.mydtype, trainable=False)
-        self._loss_counter = tf.Variable(0, dtype=tf.int64, trainable=False)
         self._pdf_pages = None
         # log different log types to tensorboard:
         self.metrics["train"]["loss_input_diff"] = tf.keras.metrics.Mean("loss_input_diff", self.mydtype)
@@ -33,6 +32,13 @@ class ModelTriangle(ModelBase):
         self.metrics["eval"]["loss_input_diff_normed"] = tf.keras.metrics.Mean("loss_input_diff_normed", self.mydtype)
         self.metrics["train"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
         self.metrics["eval"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
+
+        self.metrics["train"]["loss_input_diff_abs"] = tf.keras.metrics.Mean("loss_input_diff_abs", self.mydtype)
+        self.metrics["eval"]["loss_input_diff_abs"] = tf.keras.metrics.Mean("loss_input_diff_abs", self.mydtype)
+
+        self.metrics["train"]["loss_input_diff_s_norm_abs"] = tf.keras.metrics.Mean("loss_input_diff_s_norm_abs", self.mydtype)
+        self.metrics["eval"]["loss_input_diff_s_norm_abs"] = tf.keras.metrics.Mean("loss_input_diff_s_norm_abs", self.mydtype)
+
         self.metrics["train"]["loss_input_diff_s_norm"] = tf.keras.metrics.Mean("loss_input_diff_s_norm", self.mydtype)
         self.metrics["eval"]["loss_input_diff_s_norm"] = tf.keras.metrics.Mean("loss_input_diff_s_norm", self.mydtype)
         self.metrics["train"]["loss_best_point_diff"] = tf.keras.metrics.Mean("loss_best_point_diff", self.mydtype)
@@ -94,31 +100,29 @@ class ModelTriangle(ModelBase):
             s_norm = phi2s_tf(fc[:, 1, :])
             if self._graph.graph_params["abs_only"]:
                 print("Absolute only in loss")
-                tgt_in = tf.expand_dims(
-                    tf.math.sqrt(tf.maximum(tf.reduce_sum(tf.math.square(fc[:, 1:, :]), axis=-2), 1e-12)), axis=-2)
-                pre_in = tf.expand_dims(tf.math.sqrt(tf.maximum(tf.reduce_sum(tf.math.square(pre_in), axis=-2), 1e-12)),
-                                        axis=-2)
 
-                s_norm_stack = tf.expand_dims(s_norm, axis=1)
-            else:
-                tgt_in = fc[:, 1:, :]
-                s_norm_stack = tf.stack((s_norm, s_norm), axis=1)
+            # calc input loss for absolute case
+            tgt_in_abs = tf.expand_dims(
+                tf.math.sqrt(tf.maximum(tf.reduce_sum(tf.math.square(fc[:, 1:, :]), axis=-2), 1e-12)), axis=-2)
+            pre_in_abs = tf.expand_dims(tf.math.sqrt(tf.maximum(tf.reduce_sum(tf.math.square(pre_in), axis=-2), 1e-12)),
+                                    axis=-2)
+
+            s_norm_stack_abs = tf.expand_dims(s_norm, axis=1)
+            loss_input_diff_abs = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in_abs, tgt_in_abs))
+            loss_input_diff_s_norm_abs = tf.reduce_mean(
+                tf.keras.losses.mean_absolute_error(s_norm_stack_abs * pre_in, s_norm_stack_abs * tgt_in_abs))
+
+            # calc input loss for complex case
+            tgt_in = fc[:, 1:, :]
+            s_norm_stack = tf.stack((s_norm, s_norm), axis=1)
             loss_input_diff = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in, tgt_in))
             loss_input_diff_s_norm = tf.reduce_mean(
                 tf.keras.losses.mean_absolute_error(s_norm_stack * pre_in, s_norm_stack * tgt_in))
-            # tf.print(loss_input_diff)
-
-            # input_loss_normed
-            fpre_in = tf.keras.backend.flatten(pre_in)
-            ftgt_in = tf.keras.backend.flatten(tgt_in)
-            subtract = tf.abs(tf.subtract(fpre_in, ftgt_in))
-            max_of_both = tf.maximum(tf.abs(fpre_in), tf.abs(ftgt_in))
-            add = tf.maximum(2 * max_of_both, 5.0 * tf.ones(fpre_in.shape))
-            loss_input_diff_normed = 10.0 * tf.reduce_mean(tf.divide(subtract, add))
 
             targets_oriented = misc_tf.make_spin_positive(targets["points"], dtype=self.mydtype)
             loss_point_diff = tf.cast(tf.reduce_mean(tf.keras.losses.mean_squared_error(pre_points, targets_oriented)),
                                       self.mydtype)
+
             if "best_point_diff" in self._flags.loss_mode or "show_best_point_diff_invariant" in self._flags.loss_mode:
                     loss_best_point_diff = tf.cast(losses.batch_point3_loss(targets["points"],
                                                                             predictions["pre_points"],
@@ -138,13 +142,12 @@ class ModelTriangle(ModelBase):
             else:
                 loss_best_point_diff_invariant = tf.constant(0.0)
 
-            # tf.print("input_diff-loss", loss_input_diff)
             if "input_diff" in self._flags.loss_mode:
                 self._loss += loss_input_diff
-            if "input_diff_normed" in self._flags.loss_mode:
-                self._loss += loss_input_diff_normed
             if "input_diff_s_norm" in self._flags.loss_mode:
                 self._loss += loss_input_diff_s_norm
+            if "input_diff_abs" in self._flags.loss_mode:
+                self._loss += loss_input_diff_abs
             if "point_diff" in self._flags.loss_mode:
                 self._loss += loss_point_diff
             if "best_point_diff" in self._flags.loss_mode:
@@ -153,12 +156,11 @@ class ModelTriangle(ModelBase):
                 self._loss += loss_best_point_diff_invariant
 
             self.metrics[self._mode]["loss_input_diff"](loss_input_diff)
-            self.metrics[self._mode]["loss_input_diff_normed"](loss_input_diff_normed)
+            self.metrics[self._mode]["loss_input_diff_abs"](loss_input_diff_abs)
             self.metrics[self._mode]["loss_point_diff"](loss_point_diff)
             self.metrics[self._mode]["loss_input_diff_s_norm"](loss_input_diff_s_norm)
+            self.metrics[self._mode]["loss_input_diff_s_norm_abs"](loss_input_diff_s_norm_abs)
 
-        # relative_loss = tf.constant(0, self.mydtype)
-        # mse_area = tf.constant(0, self.mydtype)
         if "pre_area" in predictions:
             areas_tgt = tf.expand_dims(misc.get_area_of_triangle(targets['points']), axis=-1)
             # tf.print(tf.shape(areas_tgt), tf.shape(predictions['pre_area']))
@@ -243,7 +245,6 @@ class ModelTriangle(ModelBase):
         # plt.show()
         ### end plot
 
-        self._loss_counter.assign_add(1)
         return self._loss
 
     def export_helper(self):
