@@ -69,6 +69,7 @@ class SummaryPlotterTriangle(object):
         wo_loss_arr = np.ones(self._summary_lenght) * np.nan
         doa_real_arr = np.zeros(self._summary_lenght)
         doa_imag_arr = np.zeros(self._summary_lenght)
+        doa_abs_arr = np.zeros(self._summary_lenght)
         doa_real_arr_cut = np.zeros(self._summary_lenght)
         doa_imag_arr_cut = np.zeros(self._summary_lenght)
 
@@ -152,8 +153,13 @@ class SummaryPlotterTriangle(object):
             fc_arr_tgt = self.uncut_res(tgt_points)
             fc_arr_pre = self.uncut_res(pre_points)
             # normal
+
+            def abs_array(array):
+                return np.sqrt(np.sum(np.multiply(array, array), axis=-1))
+
             doa_real_arr[i] = calc_doa_x(fc_arr_tgt[1], fc_arr_pre[1])
             doa_imag_arr[i] = calc_doa_x(fc_arr_tgt[2], fc_arr_pre[2])
+            doa_abs_arr[i] = calc_doa_x(abs_array(fc_arr_tgt[1:]), abs_array(fc_arr_pre[1:]))
 
             doa_real_arr_cut[i] = calc_doa_x(fc_arr_tgt_cut[1], fc_arr_pre_cut[1])
             doa_imag_arr_cut[i] = calc_doa_x(fc_arr_tgt_cut[2], fc_arr_pre_cut[2])
@@ -326,8 +332,24 @@ class SummaryPlotterTriangle(object):
                 self._pdf_pages.savefig(fig)
                 plt.clf()
                 plt.close()
+
         header_string = f"x1_t\ty1_t\tx2_t\ty2_t\tx3_t\ty3_t\tx1_p\ty1_p\tx2_p\ty2_p\tx3_p\ty3_p\tiou\tmar\tdoa_r\tdoa_i\tdoac_r\tdoac_i\n"
         self._pdf_pages.close()
+        plt.figure("iou_cr-doa_abs-scatter")
+        plt.scatter(iou_arr_cr, doa_abs_arr)
+        plt.xlabel("iou_cr")
+        plt.ylabel("doa_abs")
+        plt.grid()
+        plt.savefig(os.path.join(self._flags.model_dir, "iou_cr-doa_abs-scatter.pdf"))
+        plt.clf()
+        plt.close()
+
+        plt.figure("iou_cr-doa_mean-scatter")
+        plt.scatter(iou_arr_cr, (doa_real_arr + doa_imag_arr) / 2.0)
+        plt.xlabel("iou_cr")
+        plt.ylabel("doa_mean")
+        plt.grid()
+        plt.savefig(os.path.join(self._flags.model_dir, "iou_cr-doa_mean-scatter.pdf"))
         with open(os.path.join(self._flags.model_dir, self.plot_params["filename"][:-3] + "csv"), 'w') as f_obj:
             f_obj.write(header_string)
             f_obj.writelines(csv_str_list)

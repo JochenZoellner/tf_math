@@ -28,8 +28,6 @@ class ModelTriangle(ModelBase):
         # log different log types to tensorboard:
         self.metrics["train"]["loss_input_diff"] = tf.keras.metrics.Mean("loss_input_diff", self.mydtype)
         self.metrics["eval"]["loss_input_diff"] = tf.keras.metrics.Mean("loss_input_diff", self.mydtype)
-        self.metrics["train"]["loss_input_diff_normed"] = tf.keras.metrics.Mean("loss_input_diff_normed", self.mydtype)
-        self.metrics["eval"]["loss_input_diff_normed"] = tf.keras.metrics.Mean("loss_input_diff_normed", self.mydtype)
         self.metrics["train"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
         self.metrics["eval"]["loss_point_diff"] = tf.keras.metrics.Mean("loss_point_diff", self.mydtype)
 
