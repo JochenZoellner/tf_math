@@ -25,6 +25,7 @@ def main(args):
         # avoid duplicated id's which would result in overwriting a row
         raise AttributeError("Duplicated ID's found, exit!")
     fn_dict_list = {}
+    sorted(file_list)
     for fn in file_list:
         with open(fn, "r") as fp_json:
             json_str = fp_json.read()
