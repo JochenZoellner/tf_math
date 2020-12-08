@@ -108,7 +108,7 @@ class ModelTriangle(ModelBase):
             s_norm_stack_abs = tf.expand_dims(s_norm, axis=1)
             loss_input_diff_abs = tf.reduce_mean(tf.keras.losses.mean_absolute_error(pre_in_abs, tgt_in_abs))
             loss_input_diff_s_norm_abs = tf.reduce_mean(
-                tf.keras.losses.mean_absolute_error(s_norm_stack_abs * pre_in, s_norm_stack_abs * tgt_in_abs))
+                tf.keras.losses.mean_absolute_error(s_norm_stack_abs * pre_in_abs, s_norm_stack_abs * tgt_in_abs))
 
             # calc input loss for complex case
             tgt_in = fc[:, 1:, :]
