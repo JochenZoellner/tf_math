@@ -20,7 +20,7 @@ PARAMS="
   --epochs $EPOCH
   --model_type ModelTriangle
   --graph GraphConv1MultiFF
-  --loss_mode input_diff,show_best_point_diff
+  --loss_mode input_diff show_best_point_diff
   --print_to file
   --data_len ${DATALEN}
   --calc_ema True
