@@ -96,11 +96,11 @@ class SummaryPlotterTriangle(object):
             # best Intersection if centered and may rotated
             pre_points_c = center_triangle(pre_points)
             pre_points_cr = flip_along_axis(pre_points_c, axis="xy")
-            tgt_points_cr = center_triangle(tgt_points)
+            tgt_points_c = center_triangle(tgt_points)
 
             pre_polygon_c = geometry.Polygon([pre_points_c[0], pre_points_c[1], pre_points_c[2]])
             pre_polygon_cr = geometry.Polygon([pre_points_cr[0], pre_points_cr[1], pre_points_cr[2]])
-            tgt_polygon_c = geometry.Polygon([tgt_points_cr[0], tgt_points_cr[1], tgt_points_cr[2]])
+            tgt_polygon_c = geometry.Polygon([tgt_points_c[0], tgt_points_c[1], tgt_points_c[2]])
             intersetion_area_c = pre_polygon_c.intersection(tgt_polygon_c).area
             union_area_c = pre_polygon_c.union(tgt_polygon_c).area
             intersetion_area_cr = pre_polygon_cr.intersection(tgt_polygon_c).area
@@ -155,7 +155,9 @@ class SummaryPlotterTriangle(object):
             # normal
 
             def abs_array(array):
-                return np.sqrt(np.sum(np.multiply(array, array), axis=-1))
+                res = np.sqrt(np.sum(np.multiply(array, array), axis=0))
+                return res
+
 
             doa_real_arr[i] = calc_doa_x(fc_arr_tgt[1], fc_arr_pre[1])
             doa_imag_arr[i] = calc_doa_x(fc_arr_tgt[2], fc_arr_pre[2])
@@ -339,6 +341,8 @@ class SummaryPlotterTriangle(object):
         plt.scatter(iou_arr_cr, doa_abs_arr)
         plt.xlabel("iou_cr")
         plt.ylabel("doa_abs")
+        plt.ylim(bottom=0.0, top=1.0)
+        plt.xlim(bottom=0.0, top=1.0)
         plt.grid()
         plt.savefig(os.path.join(self._flags.model_dir, "iou_cr-doa_abs-scatter.pdf"))
         plt.clf()
@@ -348,6 +352,8 @@ class SummaryPlotterTriangle(object):
         plt.scatter(iou_arr_cr, (doa_real_arr + doa_imag_arr) / 2.0)
         plt.xlabel("iou_cr")
         plt.ylabel("doa_mean")
+        plt.xlim(bottom=0.0, top=1.0)
+        plt.ylim(bottom=0.0, top=1.0)
         plt.grid()
         plt.savefig(os.path.join(self._flags.model_dir, "iou_cr-doa_mean-scatter.pdf"))
         with open(os.path.join(self._flags.model_dir, self.plot_params["filename"][:-3] + "csv"), 'w') as f_obj:
