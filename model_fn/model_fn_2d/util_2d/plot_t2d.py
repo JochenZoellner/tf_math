@@ -105,8 +105,16 @@ class SummaryPlotterTriangle(object):
             union_area_c = pre_polygon_c.union(tgt_polygon_c).area
             intersetion_area_cr = pre_polygon_cr.intersection(tgt_polygon_c).area
             union_area_cr = pre_polygon_cr.union(tgt_polygon_c).area
-            iou_arr_cr[i] = max(intersetion_area_c / union_area_c, intersetion_area_cr / union_area_cr)
+            iou_c = intersetion_area_c / union_area_c
+            iou_cf = intersetion_area_cr / union_area_cr
+            iou_arr_cr[i] = max(intersetion_area_c / union_area_c, iou_cf)
 
+            if iou_c > iou_cf:
+                iou_arr_cr[i] = iou_c
+                pre_points_best_match = pre_points_c
+            else:
+                iou_arr_cr[i] = iou_cf
+                pre_points_best_match = pre_points_cr
 
 
             tgt_area_arr[i] = tgt_polygon.area
@@ -191,7 +199,9 @@ class SummaryPlotterTriangle(object):
                 select_counter += 1
 
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 14))
-
+                if "plot_cr" in self.plot_params and self.plot_params["plot_cr"]:
+                    tgt_points = tgt_points_c
+                    pre_points = pre_points_best_match
                 ax1.fill(tgt_points.transpose()[0], tgt_points.transpose()[1], "b", pre_points.transpose()[0],
                          pre_points.transpose()[1], "r", alpha=0.5)
                 ax1.set_aspect(1.0)
