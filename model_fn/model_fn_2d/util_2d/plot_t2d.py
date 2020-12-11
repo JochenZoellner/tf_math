@@ -192,6 +192,8 @@ class SummaryPlotterTriangle(object):
                 select = iou_arr[i] < 0.70 and doa_imag_arr_cut[i] < 0.08 and doa_real_arr_cut[i] < 0.08
             elif "select" in self.plot_params and self.plot_params["select"] == "one_abs":
                 select = iou_arr_cr[i] < 0.70 and doa_abs_arr[i] < 0.10
+            elif "select" in self.plot_params and self.plot_params["select"] == "two_abs":
+                select = iou_arr_cr[i] < 0.70 and doa_abs_arr[i] < 0.05
             elif "select" in self.plot_params and self.plot_params["select"] == "all":
                 select = True
             else:

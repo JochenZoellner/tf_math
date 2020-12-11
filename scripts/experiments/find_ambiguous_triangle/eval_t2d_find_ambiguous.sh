@@ -54,14 +54,14 @@ sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguou
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh find_ambiguous_1 1
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh find_ambiguous_1 1
 
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_reference_lr0.0002_lrd0.98 1 --plot_params select=one_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_reference_lr0.0002_lrd0.98_swish 1 --plot_params select=one_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_absolute_reference_lr0.0002_lrd0.98 1 --plot_params select=one_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_absolute_reference_lr0.0002_lrd0.98_swish 1 --plot_params select=one_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_absolute_s_norm_reference_lr0.0002_lrd0.98 1 --plot_params select=one_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_absolute_s_norm_reference_lr0.0002_lrd0.98_swish 1 --plot_params select=one_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_s_norm_reference_lr0.0002_lrd0.98 1 --plot_params select=all plot_cr=True select_counter=200 filename=one_abs.pdf &
-sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_s_norm_reference_lr0.0002_lrd0.98_swish 1 --plot_params select=one_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_reference_lr0.0002_lrd0.98 1 --plot_params select=two_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_reference_lr0.0002_lrd0.98_swish 1 --plot_params select=two_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_absolute_reference_lr0.0002_lrd0.98 1 --plot_params select=two_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_absolute_reference_lr0.0002_lrd0.98_swish 1 --plot_params select=two_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_absolute_s_norm_reference_lr0.0002_lrd0.98 1 --plot_params select=two_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_absolute_s_norm_reference_lr0.0002_lrd0.98_swish 1 --plot_params select=two_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_s_norm_reference_lr0.0002_lrd0.98 1 --plot_params select=two_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous.sh FA_s_norm_reference_lr0.0002_lrd0.98_swish 1 --plot_params select=two_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
 
 
 
