@@ -28,6 +28,8 @@ class SummaryPlotterTriangle(object):
         self.plot_params["select"] = "all"
         self.plot_params["select_counter"] = 200
         self.plot_params["filename"] = "plot_summary.pdf"
+        self.plot_params["plot_cr"] = False  # plot the triangles centered and with best 180deg rotation
+
         self.plot_params = update_params(self.plot_params, self._flags.plot_params, "plot")
         self.fig_list = []
         self._pdf_pages = None
@@ -200,8 +202,8 @@ class SummaryPlotterTriangle(object):
 
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 14))
                 if "plot_cr" in self.plot_params and self.plot_params["plot_cr"]:
-                    tgt_points = tgt_points_c
-                    pre_points = pre_points_best_match
+                    tgt_points = tgt_points_c.numpy()
+                    pre_points = pre_points_best_match.numpy()
                 ax1.fill(tgt_points.transpose()[0], tgt_points.transpose()[1], "b", pre_points.transpose()[0],
                          pre_points.transpose()[1], "r", alpha=0.5)
                 ax1.set_aspect(1.0)
