@@ -20,7 +20,7 @@ np.set_printoptions(precision=6, suppress=True)
 class SummaryPlotterTriangle(object):
     def __init__(self, summary_object, flags):
         super(SummaryPlotterTriangle).__init__()
-        self.mydtype = tf.float32
+        self.mydtype = tf.float64
         self._summary_object = summary_object
         self._summary_lenght = len(self._summary_object["tgt_points"])
         self._flags = flags
@@ -56,7 +56,7 @@ class SummaryPlotterTriangle(object):
         input_points = tf.squeeze(misc_tf.make_spin_positive(tf.expand_dims(input_points, axis=0)),
                                   axis=0)
         fc_res = self._fc_obj(input_points)
-        phi_batch = self._phi_array
+        phi_batch = tf.cast(self._phi_array, dtype=self.mydtype)
         return tf.concat((phi_batch, fc_res), axis=0).numpy()
 
     def process(self):
@@ -161,12 +161,21 @@ class SummaryPlotterTriangle(object):
             fc_arr_pre_cut = self.cut_res(pre_points)
 
             fc_arr_tgt = self.uncut_res(tgt_points)
+            fc_arr_pre_cr = self.uncut_res(pre_points_cr)
+            fc_arr_pre_c = self.uncut_res(pre_points_c)
             fc_arr_pre = self.uncut_res(pre_points)
             # normal
 
             def abs_array(array):
                 res = np.sqrt(np.sum(np.multiply(array, array), axis=0))
                 return res
+
+            assert np.allclose(abs_array(fc_arr_pre_cr[1:]), abs_array(fc_arr_pre[1:]), atol=1e-4, rtol=1e-4), f'cr-assertion faild on sample {i}: {pre_points_c} and {pre_points_cr}.'
+
+                # plt.figure()
+                # plt.plot(fc_arr_pre_cr[0], abs_array(fc_arr_pre_cr[1:]) - abs_array(fc_arr_pre[1:]))
+                # plt.plot(fc_arr_pre_cr[0], abs_array(fc_arr_pre_cr[1:]))
+                # plt.show()
 
 
             doa_real_arr[i] = calc_doa_x(fc_arr_tgt[1], fc_arr_pre[1])
@@ -183,8 +192,7 @@ class SummaryPlotterTriangle(object):
             # print("target over prediction")
             # print(fc_arr_tgt_cut[1])
             # print(fc_arr_pre_cut[1])
-            if "select_counter" in self.plot_params and self.plot_params[
-                "select_counter"] <= select_counter:
+            if "select_counter" in self.plot_params and self.plot_params["select_counter"] <= select_counter:
                 continue
             if "select" in self.plot_params and self.plot_params["select"] == "one":
                 select = iou_arr[i] < 0.50 and doa_imag_arr_cut[i] < 0.03 and doa_real_arr_cut[i] < 0.03
@@ -226,6 +234,13 @@ class SummaryPlotterTriangle(object):
                              label="real_pre_cut", linewidth=2)
                     ax2.plot(fc_arr_pre_cut[0], npm.masked_where(0 == fc_arr_pre_cut[2], fc_arr_pre_cut[2]), "r-",
                              label="imag_pre_cut", linewidth=2)
+
+                elif "plot_cr" in self.plot_params and self.plot_params["plot_cr"]:
+                    ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1] * phi2s(fc_arr_tgt[0]), label="abs_tgt")
+                    #  prediction
+                    ax2.plot(fc_arr_pre[0], fc_arr_pre[1] * phi2s(fc_arr_pre[0]), label="abs_pre")
+
+                    ax2.set_xlim(0, np.pi)
 
                 elif "plot_s_norm" in self.plot_params and self.plot_params["plot_s_norm"]:
                     ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1] * phi2s(fc_arr_tgt[0]), label="real_tgt")
