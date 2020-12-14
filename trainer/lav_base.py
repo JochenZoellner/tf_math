@@ -55,6 +55,7 @@ class LavBase(object):
                 print(
                     "stop validation after {} batches with {} samples each.".format(batch, self._flags.val_batch_size))
                 break
+            print(input_features["fc"][0, 0])
             graph_out = self._model.graph_eval(input_features, training=False)
             loss = self._model.loss(graph_out, targets)
             self._model.print_evaluate(graph_out, targets)

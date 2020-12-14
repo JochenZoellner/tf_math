@@ -134,6 +134,7 @@ class DataGeneratorBase(object):
         for sample in parsed_dataset_batched:
             # tf.decode_raw(sample["fc"], out_type=tf.float32)
             inputs = sample[0]
+            print(inputs["fc"][0,0])
             targets = sample[1]
             if counter == 0:
                 print("Inputs:")

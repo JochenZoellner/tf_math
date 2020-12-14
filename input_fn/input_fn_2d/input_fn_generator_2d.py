@@ -36,17 +36,20 @@ class InputFn2D(InputFnBase):
 
         if not max_fov:
             max_fov = float(self._input_params["max_fov"])
-        phi_vec = batch["fc"][0, 0, :]
-        max_fov = max_fov / 180.0 * np.pi  # max_angle_of_view_cut_rad
-        min_fov = min_fov / 180.0 * np.pi  # hole
-        outer_cut = (np.pi - max_fov) / 2.0
-        inner_cut = min_fov / 2.0
-        lower_block = tf.logical_and(phi_vec >= outer_cut, phi_vec < (np.pi / 2.0 - inner_cut))
-        upper_block = tf.logical_and(phi_vec >= np.pi / 2.0 + inner_cut, phi_vec < (np.pi - outer_cut))
-        both_blocks = tf.logical_or(lower_block, upper_block)
-        batch["fc"] = tf.where(both_blocks, batch["fc"], tf.zeros_like(batch["fc"]))
-        # batch["fc"] = tf.concat((batch["fc"][:, :1], mask_batch[:, 1:]), axis=1)
 
+        if max_fov < 180.0:
+            phi_vec = batch["fc"][0, 0, :]
+            max_fov = max_fov / 180.0 * np.pi  # max_angle_of_view_cut_rad
+            min_fov = min_fov / 180.0 * np.pi  # hole
+            outer_cut = (np.pi - max_fov) / 2.0
+            inner_cut = min_fov / 2.0
+            lower_block = tf.logical_and(phi_vec >= outer_cut, phi_vec < (np.pi / 2.0 - inner_cut))
+            upper_block = tf.logical_and(phi_vec >= np.pi / 2.0 + inner_cut, phi_vec < (np.pi - outer_cut))
+            both_blocks = tf.logical_or(lower_block, upper_block)
+            batch["fc"] = tf.where(both_blocks, batch["fc"], tf.zeros_like(batch["fc"]))
+            # batch["fc"] = tf.concat((batch["fc"][:, :1], mask_batch[:, 1:]), axis=1)
+        if max_fov > 180.0:
+            raise ValueError("max_fov is not supported for >180degree")
         return batch
 
     def tf_cut_phi_batch(self, feature_dict, target_dict):
