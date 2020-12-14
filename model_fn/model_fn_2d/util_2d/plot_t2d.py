@@ -246,6 +246,7 @@ class SummaryPlotterTriangle(object):
                     ax2.plot(fc_arr_pre[0], abs_array(fc_arr_pre[1:]) * norm, label="abs_pre")
 
                     ax2.set_xlim(fc_arr_pre[0, 0], fc_arr_pre[0, -1])
+                    print(fc_arr_pre[0, :])
 
                 elif "plot_s_norm" in self.plot_params and self.plot_params["plot_s_norm"]:
                     ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1] * phi2s(fc_arr_tgt[0]), label="real_tgt")
@@ -391,7 +392,7 @@ class SummaryPlotterTriangle(object):
         plt.ylabel("doa_mean")
         plt.xlim(0.0, 1.0)
         plt.ylim(0.0, 1.0)
-        plt.savefig(os.path.join(self._flags.model_dir, "iou_cr-doa_mean-scatter.pdf"))
+        plt.savefig(os.path.join(self._flags.model_dir, "iou-doa_mean-scatter.pdf"))
         with open(os.path.join(self._flags.model_dir, self.plot_params["filename"][:-3] + "csv"), 'w') as f_obj:
             f_obj.write(header_string)
             f_obj.writelines(csv_str_list)
