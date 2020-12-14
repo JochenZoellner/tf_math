@@ -50,6 +50,7 @@ class InputFn2D(InputFnBase):
             # batch["fc"] = tf.concat((batch["fc"][:, :1], mask_batch[:, 1:]), axis=1)
         if max_fov > 180.0:
             raise ValueError("max_fov is not supported for >180degree")
+
         return batch
 
     def tf_cut_phi_batch(self, feature_dict, target_dict):
