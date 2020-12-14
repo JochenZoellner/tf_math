@@ -387,7 +387,7 @@ class SummaryPlotterTriangle(object):
         plt.figure("iou-doa_mean-scatter")
         plt.grid()
         plt.scatter(iou_arr, (doa_real_arr + doa_imag_arr) / 2.0, s=1)
-        plt.xlabel("iou_cr")
+        plt.xlabel("iou")
         plt.ylabel("doa_mean")
         plt.xlim(0.0, 1.0)
         plt.ylim(0.0, 1.0)
