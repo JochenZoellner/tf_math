@@ -170,7 +170,8 @@ class SummaryPlotterTriangle(object):
                 res = np.sqrt(np.sum(np.multiply(array, array), axis=0))
                 return res
 
-            assert np.allclose(abs_array(fc_arr_pre_cr[1:]), abs_array(fc_arr_pre[1:]), atol=1e-4, rtol=1e-4), f'cr-assertion faild on sample {i}: {pre_points_c} and {pre_points_cr}.'
+            assert np.allclose(
+                abs_array(fc_arr_pre_cr[1:]), abs_array(fc_arr_pre[1:]), atol=1e-4, rtol=1e-4), f'cr-assertion faild on sample {i}: {pre_points_c} and {pre_points_cr} with distance {np.max(np.abs(abs_array(fc_arr_pre[1:]-fc_arr_pre_cr[1:])))}.'
 
                 # plt.figure()
                 # plt.plot(fc_arr_pre_cr[0], abs_array(fc_arr_pre_cr[1:]) - abs_array(fc_arr_pre[1:]))
@@ -236,11 +237,15 @@ class SummaryPlotterTriangle(object):
                              label="imag_pre_cut", linewidth=2)
 
                 elif "plot_cr" in self.plot_params and self.plot_params["plot_cr"]:
-                    ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1] * phi2s(fc_arr_tgt[0]), label="abs_tgt")
+                    if "plot_s_norm" in self.plot_params and self.plot_params["plot_s_norm"]:
+                        norm = phi2s(fc_arr_tgt[0])
+                    else:
+                        norm = 1.0
+                    ax2.plot(fc_arr_tgt[0], abs_array(fc_arr_tgt[1:]) * norm, label="abs_tgt")
                     #  prediction
-                    ax2.plot(fc_arr_pre[0], fc_arr_pre[1] * phi2s(fc_arr_pre[0]), label="abs_pre")
+                    ax2.plot(fc_arr_pre[0], abs_array(fc_arr_pre[1:]) * norm, label="abs_pre")
 
-                    ax2.set_xlim(0, np.pi)
+                    ax2.set_xlim(fc_arr_pre[0, 0], fc_arr_pre[0, -1])
 
                 elif "plot_s_norm" in self.plot_params and self.plot_params["plot_s_norm"]:
                     ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1] * phi2s(fc_arr_tgt[0]), label="real_tgt")
@@ -249,7 +254,7 @@ class SummaryPlotterTriangle(object):
                     ax2.plot(fc_arr_pre[0], fc_arr_pre[1] * phi2s(fc_arr_pre[0]), label="real_pre")
                     ax2.plot(fc_arr_pre[0], fc_arr_pre[2] * phi2s(fc_arr_pre[0]), label="imag_pre")
 
-                    ax2.set_xlim(0, np.pi)
+                    ax2.set_xlim(fc_arr_pre[0, 0], fc_arr_pre[0, -1])
                 else:
                     ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1], label="real_tgt")
                     ax2.plot(fc_arr_tgt[0], fc_arr_tgt[2], label="imag_tgt")
@@ -257,7 +262,7 @@ class SummaryPlotterTriangle(object):
                     ax2.plot(fc_arr_pre[0], fc_arr_pre[1], label="real_pre")
                     ax2.plot(fc_arr_pre[0], fc_arr_pre[2], label="imag_pre")
 
-                    ax2.set_xlim(0, np.pi)
+                    ax2.set_xlim(fc_arr_pre[0], fc_arr_pre[-1])
                     # target scatter
                     # phi_3dim = np.abs(phi_arr - np.pi / 2)
                     # fc_arr_tgt = t2d.make_scatter_data(tgt_points, phi_arr=phi_arr, epsilon=0.002)
@@ -369,23 +374,23 @@ class SummaryPlotterTriangle(object):
         header_string = f"x1_t\ty1_t\tx2_t\ty2_t\tx3_t\ty3_t\tx1_p\ty1_p\tx2_p\ty2_p\tx3_p\ty3_p\tiou\tmar\tdoa_r\tdoa_i\tdoac_r\tdoac_i\n"
         self._pdf_pages.close()
         plt.figure("iou_cr-doa_abs-scatter")
-        plt.scatter(iou_arr_cr, doa_abs_arr)
+        plt.grid()
+        plt.scatter(iou_arr_cr, doa_abs_arr, s=1)
         plt.xlabel("iou_cr")
         plt.ylabel("doa_abs")
         plt.ylim(0.0, 1.0)
         plt.xlim(0.0, 1.0)
-        plt.grid()
         plt.savefig(os.path.join(self._flags.model_dir, "iou_cr-doa_abs-scatter.pdf"))
         plt.clf()
         plt.close()
 
         plt.figure("iou_cr-doa_mean-scatter")
-        plt.scatter(iou_arr_cr, (doa_real_arr + doa_imag_arr) / 2.0)
+        plt.grid()
+        plt.scatter(iou_arr_cr, (doa_real_arr + doa_imag_arr) / 2.0, s=1)
         plt.xlabel("iou_cr")
         plt.ylabel("doa_mean")
         plt.xlim(0.0, 1.0)
         plt.ylim(0.0, 1.0)
-        plt.grid()
         plt.savefig(os.path.join(self._flags.model_dir, "iou_cr-doa_mean-scatter.pdf"))
         with open(os.path.join(self._flags.model_dir, self.plot_params["filename"][:-3] + "csv"), 'w') as f_obj:
             f_obj.write(header_string)
