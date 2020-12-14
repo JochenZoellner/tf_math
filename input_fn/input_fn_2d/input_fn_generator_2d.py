@@ -49,7 +49,7 @@ class InputFn2D(InputFnBase):
             batch["fc"] = tf.where(both_blocks, batch["fc"], tf.zeros_like(batch["fc"]))
             # batch["fc"] = tf.concat((batch["fc"][:, :1], mask_batch[:, 1:]), axis=1)
         if max_fov > 180.0:
-            raise ValueError("max_fov is not supported for >180degree")
+            raise ValueError("max_fov is not supported for >180degree, disable cut field of view with max_fov=180.0 which is the default")
 
         return batch
 
