@@ -35,7 +35,9 @@ class SummaryPlotterTriangle(object):
         self._pdf_pages = None
 
         if "fc" in self._summary_object:
+            print("fc is in summary object")
             self._phi_array = self._summary_object["fc"][0][0:1]
+            print(self._phi_array)
         else:
             self._phi_array = tf.expand_dims(phi_array_open_symetric_no90(delta_phi=0.01), axis=0)
 
@@ -246,7 +248,7 @@ class SummaryPlotterTriangle(object):
                     ax2.plot(fc_arr_pre[0], abs_array(fc_arr_pre[1:]) * norm, label="abs_pre")
 
                     ax2.set_xlim(fc_arr_pre[0, 0], fc_arr_pre[0, -1])
-                    print(fc_arr_pre[0, :])
+                    # print(fc_arr_pre[0, :])
 
                 elif "plot_s_norm" in self.plot_params and self.plot_params["plot_s_norm"]:
                     ax2.plot(fc_arr_tgt[0], fc_arr_tgt[1] * phi2s(fc_arr_tgt[0]), label="real_tgt")
