@@ -367,14 +367,14 @@ class SummaryPlotterTriangle(object):
                 plt.grid()
                 tgt_point_str = f"{tgt_points[0][0]}\t{tgt_points[0][1]}\t{tgt_points[1][0]}\t{tgt_points[1][1]}\t{tgt_points[2][0]}\t{tgt_points[2][1]}"
                 pre_point_str = f"{pre_points[0][0]}\t{pre_points[0][1]}\t{pre_points[1][0]}\t{pre_points[1][1]}\t{pre_points[2][0]}\t{pre_points[2][1]}"
-                calc_str = f"{intersetion_area / union_area}\t{min_aspect_ratio_arr[i]}\t{doa_real_arr[i]}\t{doa_imag_arr[i]}\t{doa_real_arr_cut[i]}\t{doa_imag_arr_cut[i]}"
+                calc_str = f"{intersetion_area / union_area}\t{min_aspect_ratio_arr[i]}\t{doa_real_arr[i]}\t{doa_imag_arr[i]}\t{doa_real_arr_cut[i]}\t{doa_imag_arr_cut[i]}\t{iou_arr_cr[i]}\t{doa_abs_arr[i]}"
                 csv_str = tgt_point_str + "\t" + pre_point_str + "\t" + calc_str + "\n"
                 csv_str_list.append(csv_str)
                 self._pdf_pages.savefig(fig)
                 plt.clf()
                 plt.close()
 
-        header_string = f"x1_t\ty1_t\tx2_t\ty2_t\tx3_t\ty3_t\tx1_p\ty1_p\tx2_p\ty2_p\tx3_p\ty3_p\tiou\tmar\tdoa_r\tdoa_i\tdoac_r\tdoac_i\n"
+        header_string = f"x1_t\ty1_t\tx2_t\ty2_t\tx3_t\ty3_t\tx1_p\ty1_p\tx2_p\ty2_p\tx3_p\ty3_p\tiou\tmar\tdoa_r\tdoa_i\tdoac_r\tdoac_i\tiou_cr\tdoa_abs\n"
         self._pdf_pages.close()
         plt.figure("iou_cr-doa_abs-scatter")
         plt.grid()
