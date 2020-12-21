@@ -42,4 +42,9 @@ sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguou
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_absolute_s_norm_FC_reference_lr0.0002_lrd0.98 0 --plot_params select=two_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_s_norm_FC_reference_lr0.0002_lrd0.98_swish 0 --plot_params select=two_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
 sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_s_norm_FC_reference_lr0.0002_lrd0.98 0 --plot_params select=two_abs plot_cr=True select_counter=200 filename=one_abs.pdf &
+
+
+
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_s_norm_FC_reference_lr0.0002_lrd0.98 0 --plot_params select=two_abs plot_cr=True select_counter=200 filename=train_one_abs.pdf --val_list lists/t2d_find_ambiguous_FC_train.lst &
+sh ./tf_neiss/scripts/experiments/find_ambiguous_triangle/eval_t2d_find_ambiguous_full_circle.sh FA_absolute_s_norm_FC_reference_lr0.0002_lrd0.98 0 --plot_params select=two_abs plot_cr=True select_counter=200 filename=train_one_abs.pdf --val_list lists/t2d_find_ambiguous_FC_train.lst &
 ////

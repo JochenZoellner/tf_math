@@ -204,7 +204,7 @@ class SummaryPlotterTriangle(object):
             elif "select" in self.plot_params and self.plot_params["select"] == "one_abs":
                 select = iou_arr_cr[i] < 0.70 and doa_abs_arr[i] < 0.10
             elif "select" in self.plot_params and self.plot_params["select"] == "two_abs":
-                select = iou_arr_cr[i] < 0.70 and doa_abs_arr[i] < 0.05
+                select = iou_arr_cr[i] < 0.85 and doa_abs_arr[i] < 0.05
             elif "select" in self.plot_params and self.plot_params["select"] == "all":
                 select = True
             else:
@@ -353,9 +353,9 @@ class SummaryPlotterTriangle(object):
                 ax1.set_title("(red) pre: P1={:3.2f},{:3.2f}|P2={:3.2f},{:3.2f}|P3={:3.2f},{:3.2f}\n"
                               "(blue)tgt: P1={:3.2f},{:3.2f}|P2={:3.2f},{:3.2f}|P3={:3.2f},{:3.2f}\n"
                               "IoU:    {:1.2f}; MAR {:0.2f}\n"
-                              "IoU_cr:       {:1.2f}; DoA (abs)     {:1.2f}\n"
-                              "DoA (real)    {:1.2f}; DoA (imag)    {:1.2f}\n"
-                              "DoA_cut(real) {:1.2f}; DoA_cut(imag) {:1.2f}".format(
+                              "IoU_cr:       {:1.2f}; DoA (abs)     {:1.4f}\n"
+                              "DoA (real)    {:1.4f}; DoA (imag)    {:1.4f}\n"
+                              "DoA_cut(real) {:1.4f}; DoA_cut(imag) {:1.4f}".format(
                                 pre_points[0][0], pre_points[0][1], pre_points[1][0],
                                 pre_points[1][1], pre_points[2][0], pre_points[2][1],
                                 tgt_points[0][0], tgt_points[0][1], tgt_points[1][0],
